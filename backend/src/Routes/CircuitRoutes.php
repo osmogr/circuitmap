@@ -39,6 +39,13 @@ final class CircuitRoutes
             ->add($csrfMiddleware)
             ->add(new RateLimitMiddleware($rateLimiter, 'upload', 3600, 20, 'user'));
 
+        $app->get('/circuits/new', [$controller, 'showNewForm'])->add($authGate);
+
+        $app->post('/circuits/new', [$controller, 'createBlank'])
+            ->add($authGate)
+            ->add($csrfMiddleware)
+            ->add(new RateLimitMiddleware($rateLimiter, 'upload', 3600, 20, 'user'));
+
         $apiCircuits = $app->get('/api/circuits', [$controller, 'listJson']);
         $apiGeoJson = $app->get('/api/circuits/{uuid}/geojson', [$controller, 'geoJson']);
 

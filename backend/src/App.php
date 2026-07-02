@@ -11,6 +11,7 @@ use CircuitMap\Controllers\EditController;
 use CircuitMap\Controllers\StatusController;
 use CircuitMap\Middleware\AuthGateMiddleware;
 use CircuitMap\Middleware\CsrfMiddleware;
+use CircuitMap\Middleware\ProxyAuthMiddleware;
 use CircuitMap\Middleware\SessionMiddleware;
 use CircuitMap\Models\AuditLogRepository;
 use CircuitMap\Models\CircuitRepository;
@@ -59,6 +60,26 @@ final class App
         CircuitRoutes::register($app, $services);
         AdminRoutes::register($app, $services);
 
+        // Added before SessionMiddleware (see add-order note below) so it
+        // executes AFTER the session is started but BEFORE route-specific
+        // middleware like AuthGateMiddleware reads currentUser().
+        if (Env::getBool('PROXY_AUTH_ENABLED', false)) {
+            $defaultRole = Env::get('PROXY_AUTH_DEFAULT_ROLE', 'editor');
+            if (!in_array($defaultRole, ['editor', 'admin'], true)) {
+                $defaultRole = 'editor';
+            }
+
+            $app->add(new ProxyAuthMiddleware(
+                $services['auth'],
+                Env::get('PROXY_AUTH_HEADER', 'X-Forwarded-Email'),
+                $defaultRole
+            ));
+        }
+
+        // Slim middleware runs LIFO: the last one added here (error
+        // middleware) executes first, wrapping everything else; the first
+        // one added (SessionMiddleware, or ProxyAuthMiddleware above it)
+        // executes last, right before route dispatch.
         $app->add(new SessionMiddleware());
         $app->addRoutingMiddleware();
 

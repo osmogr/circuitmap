@@ -72,6 +72,68 @@ final class CircuitController
         return $response->withHeader('Content-Type', 'text/html; charset=utf-8');
     }
 
+    public function showNewForm(Request $request, Response $response): Response
+    {
+        $currentUser = $this->auth->currentUser();
+        $html = View::render('layout', [
+            'title' => 'New circuit',
+            'csrfToken' => $this->csrf->getToken(),
+            'currentUser' => $currentUser,
+            'content' => View::render('new', [
+                'csrfToken' => $this->csrf->getToken(),
+                'error' => null,
+            ]),
+        ]);
+        $response->getBody()->write($html);
+        return $response->withHeader('Content-Type', 'text/html; charset=utf-8');
+    }
+
+    /**
+     * Creates a circuit with no geometry yet, then hands off to the editor
+     * to populate it. The stored KML is built directly from an empty
+     * GeoJSON FeatureCollection via GeoJsonConverter (the same code path
+     * the editor's save uses) rather than through KmlParser/KmlValidator:
+     * there is no user-supplied file here to parse or sanitize, and
+     * KmlValidator's "at least one Placemark" rule is a save-time gate the
+     * editor will enforce once the user actually draws something.
+     */
+    public function createBlank(Request $request, Response $response): Response
+    {
+        $currentUser = $request->getAttribute('currentUser');
+        $body = (array) $request->getParsedBody();
+        $name = is_string($body['name'] ?? null) ? trim($body['name']) : '';
+        $description = is_string($body['description'] ?? null) ? trim($body['description']) : null;
+        $tags = is_string($body['tags'] ?? null) ? trim($body['tags']) : null;
+
+        if ($name === '') {
+            return $this->renderNewError($response, 'A circuit name is required.', 422);
+        }
+
+        $dom = $this->geoJsonConverter->toKml(['features' => []]);
+        $normalizedXml = (string) $dom->saveXML();
+        $uuid = Uuid::v4();
+        $relativePath = $this->storage->saveNew($uuid, $normalizedXml);
+
+        $circuitId = $this->circuits->insert(
+            $uuid,
+            $name,
+            $description,
+            $tags,
+            (int) $currentUser['id'],
+            $relativePath
+        );
+
+        $this->auditLog->log(
+            (int) $currentUser['id'],
+            'create',
+            $circuitId,
+            "name={$name}",
+            ClientIp::from($request)
+        );
+
+        return (new SlimResponse())->withHeader('Location', "/circuits/{$uuid}/edit")->withStatus(302);
+    }
+
     public function upload(Request $request, Response $response): Response
     {
         $currentUser = $request->getAttribute('currentUser');
@@ -264,6 +326,22 @@ final class CircuitController
             'csrfToken' => $this->csrf->getToken(),
             'currentUser' => $currentUser,
             'content' => View::render('upload', [
+                'csrfToken' => $this->csrf->getToken(),
+                'error' => $message,
+            ]),
+        ]);
+        $response->getBody()->write($html);
+        return $response->withHeader('Content-Type', 'text/html; charset=utf-8')->withStatus($status);
+    }
+
+    private function renderNewError(Response $response, string $message, int $status): Response
+    {
+        $currentUser = $this->auth->currentUser();
+        $html = View::render('layout', [
+            'title' => 'New circuit',
+            'csrfToken' => $this->csrf->getToken(),
+            'currentUser' => $currentUser,
+            'content' => View::render('new', [
                 'csrfToken' => $this->csrf->getToken(),
                 'error' => $message,
             ]),

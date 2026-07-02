@@ -41,6 +41,46 @@ final class AuthService
         return $user;
     }
 
+    /**
+     * Establishes a session from an email a trusted reverse proxy has
+     * already authenticated, auto-provisioning the user on first sight.
+     * Callers (ProxyAuthMiddleware) are solely responsible for ensuring
+     * the email actually came from the proxy and not from the client;
+     * this method trusts whatever string it is given.
+     *
+     * No-ops if the given email is already the current session identity,
+     * so a proxy that sends the header on every request doesn't force a
+     * session-id regeneration (and the DB write in updateLastLogin) on
+     * every single hit.
+     */
+    public function syncFromProxyHeader(string $email, string $defaultRole): void
+    {
+        $user = $this->users->findByEmail($email);
+        if ($user === null) {
+            // The password is unusable on purpose: this account can only
+            // ever be reached through the proxy header, never /login.
+            $passwordHash = password_hash(bin2hex(random_bytes(32)), PASSWORD_DEFAULT);
+            $newId = $this->users->create($email, $passwordHash, $defaultRole);
+            $user = $this->users->findById($newId);
+        }
+
+        if ($user === null || (int) $user['is_active'] !== 1) {
+            return;
+        }
+
+        if (($_SESSION['user_id'] ?? null) === (int) $user['id']) {
+            return;
+        }
+
+        if (session_status() === \PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
+        $_SESSION['user_id'] = (int) $user['id'];
+        $_SESSION['role'] = $user['role'];
+
+        $this->users->updateLastLogin((int) $user['id']);
+    }
+
     public function logout(): void
     {
         $_SESSION = [];

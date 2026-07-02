@@ -1,0 +1,48 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+      target: runtime
+    image: circuitmap-app:local
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      APP_DEBUG: "${APP_DEBUG:-false}"
+      DB_PATH: /var/lib/circuitmap/db/circuitmap.sqlite
+      MIGRATIONS_PATH: /var/www/migrations
+      KML_STORAGE_PATH: /var/lib/circuitmap/kml
+      REQUIRE_AUTH_FOR_VIEW: "${REQUIRE_AUTH_FOR_VIEW:-false}"
+      COOKIE_SECURE: "${COOKIE_SECURE:-true}"
+      INITIAL_ADMIN_EMAIL: "${INITIAL_ADMIN_EMAIL:?INITIAL_ADMIN_EMAIL is required}"
+      INITIAL_ADMIN_PASSWORD: "${INITIAL_ADMIN_PASSWORD:?INITIAL_ADMIN_PASSWORD is required}"
+      MAX_UPLOAD_BYTES: "${MAX_UPLOAD_BYTES:-10485760}"
+    volumes:
+      - kml-data:/var/lib/circuitmap/kml
+      - db-data:/var/lib/circuitmap/db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  test:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+      target: test
+    image: circuitmap-test:local
+    profiles: ["test"]
+    environment:
+      APP_DEBUG: "true"
+      DB_PATH: /tmp/circuitmap-test.sqlite
+      MIGRATIONS_PATH: /var/www/migrations
+      KML_STORAGE_PATH: /tmp/circuitmap-test-kml
+      INITIAL_ADMIN_EMAIL: "test@example.invalid"
+      INITIAL_ADMIN_PASSWORD: "test-password-not-used"
+
+volumes:
+  kml-data:
+  db-data:

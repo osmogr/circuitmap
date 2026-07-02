@@ -1,0 +1,197 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+    color: #1a1a1a;
+    background: #f7f7f7;
+}
+
+.site-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.5rem;
+    background: #1f2933;
+    color: #fff;
+}
+
+.site-header a {
+    color: #fff;
+    text-decoration: none;
+}
+
+.site-title {
+    font-weight: 600;
+}
+
+.nav-logout-form {
+    display: inline;
+}
+
+.nav-logout-form button {
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+main {
+    padding: 1.5rem;
+}
+
+.login-page form,
+.upload-page form {
+    max-width: 420px;
+}
+
+.login-page label,
+.upload-page label {
+    display: block;
+    margin-bottom: 0.75rem;
+}
+
+.login-page input,
+.upload-page input,
+.upload-page textarea {
+    display: block;
+    width: 100%;
+    padding: 0.4rem;
+    margin-top: 0.25rem;
+}
+
+.error {
+    color: #b00020;
+}
+
+main:has(.map-page),
+main:has(.edit-page) {
+    padding: 0;
+}
+
+.edit-page {
+    display: flex;
+    height: calc(100vh - 53px);
+}
+
+.edit-sidebar {
+    width: 320px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    padding: 1rem;
+    background: #fff;
+    border-right: 1px solid #ddd;
+}
+
+.edit-sidebar label {
+    display: block;
+    margin-bottom: 0.75rem;
+}
+
+.edit-sidebar input,
+.edit-sidebar textarea {
+    display: block;
+    width: 100%;
+    padding: 0.4rem;
+    margin-top: 0.25rem;
+}
+
+.edit-sidebar .hint {
+    font-size: 0.85rem;
+    color: #555;
+}
+
+.edit-sidebar button.danger {
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    margin-top: 0.5rem;
+    cursor: pointer;
+}
+
+.edit-sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.edit-page #map {
+    flex-grow: 1;
+    height: 100%;
+}
+
+.admin-page table {
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 900px;
+    margin-bottom: 1.5rem;
+}
+
+.admin-page th,
+.admin-page td {
+    border: 1px solid #ddd;
+    padding: 0.4rem 0.6rem;
+    text-align: left;
+}
+
+.admin-page .inline-form {
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+.new-user-form {
+    max-width: 320px;
+}
+
+.new-user-form label {
+    display: block;
+    margin-bottom: 0.75rem;
+}
+
+.new-user-form input,
+.new-user-form select {
+    display: block;
+    width: 100%;
+    padding: 0.4rem;
+    margin-top: 0.25rem;
+}
+
+.map-page {
+    display: flex;
+    height: calc(100vh - 53px);
+}
+
+.circuit-list {
+    width: 260px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    padding: 1rem;
+    background: #fff;
+    border-right: 1px solid #ddd;
+}
+
+.circuit-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.circuit-list li {
+    margin-bottom: 0.5rem;
+}
+
+.status-dot {
+    display: inline-block;
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    margin: 0 0.35rem;
+}
+
+#map {
+    flex-grow: 1;
+    height: 100%;
+}

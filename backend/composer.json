@@ -1,0 +1,29 @@
+{
+    "name": "circuitmap/app",
+    "description": "KML fiber circuit viewer",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.2",
+        "slim/slim": "4.13.0",
+        "slim/psr7": "1.7.1",
+        "ezyang/htmlpurifier": "4.17.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "10.5.20"
+    },
+    "autoload": {
+        "psr-4": {
+            "CircuitMap\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "CircuitMap\\Tests\\": "../tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "optimize-autoloader": true
+    }
+}

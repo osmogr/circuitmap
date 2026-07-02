@@ -1,0 +1,79 @@
+<?php
+
+declare(strict_types=1);
+
+namespace CircuitMap\Routes;
+
+use CircuitMap\Controllers\CircuitController;
+use CircuitMap\Middleware\AuthGateMiddleware;
+use CircuitMap\Middleware\CsrfMiddleware;
+use CircuitMap\Middleware\RateLimitMiddleware;
+use CircuitMap\Services\RateLimit\RateLimiterService;
+use CircuitMap\Support\Env;
+use Slim\App;
+
+final class CircuitRoutes
+{
+    /**
+     * @param array<string, mixed> $services
+     */
+    public static function register(App $app, array $services): void
+    {
+        /** @var CircuitController $controller */
+        $controller = $services['circuitController'];
+        /** @var \CircuitMap\Controllers\EditController $editController */
+        $editController = $services['editController'];
+        /** @var \CircuitMap\Controllers\StatusController $statusController */
+        $statusController = $services['statusController'];
+        /** @var AuthGateMiddleware $authGate */
+        $authGate = $services['authGateMiddleware'];
+        /** @var CsrfMiddleware $csrfMiddleware */
+        $csrfMiddleware = $services['csrfMiddleware'];
+        /** @var RateLimiterService $rateLimiter */
+        $rateLimiter = $services['rateLimiter'];
+
+        $app->get('/upload', [$controller, 'showUploadForm'])->add($authGate);
+
+        $app->post('/upload', [$controller, 'upload'])
+            ->add($authGate)
+            ->add($csrfMiddleware)
+            ->add(new RateLimitMiddleware($rateLimiter, 'upload', 3600, 20, 'user'));
+
+        $apiCircuits = $app->get('/api/circuits', [$controller, 'listJson']);
+        $apiGeoJson = $app->get('/api/circuits/{uuid}/geojson', [$controller, 'geoJson']);
+
+        if (Env::getBool('REQUIRE_AUTH_FOR_VIEW', false)) {
+            $apiCircuits->add($authGate);
+            $apiGeoJson->add($authGate);
+        }
+
+        $app->get('/circuits/{uuid}/edit', [$editController, 'showEditForm'])->add($authGate);
+
+        $app->put('/circuits/{uuid}', [$editController, 'update'])
+            ->add($authGate)
+            ->add($csrfMiddleware)
+            ->add(new RateLimitMiddleware($rateLimiter, 'edit', 3600, 60, 'user'));
+
+        $app->delete('/circuits/{uuid}', [$controller, 'delete'])
+            ->add($authGate)
+            ->add($csrfMiddleware)
+            ->add(new RateLimitMiddleware($rateLimiter, 'edit', 3600, 60, 'user'));
+
+        $app->get('/circuits/{uuid}/versions', [$editController, 'listVersions'])->add($authGate);
+
+        $app->post('/circuits/{uuid}/revert/{version}', [$editController, 'revert'])
+            ->add($authGate)
+            ->add($csrfMiddleware)
+            ->add(new RateLimitMiddleware($rateLimiter, 'edit', 3600, 60, 'user'));
+
+        $app->post('/circuits/{uuid}/status', [$statusController, 'setStatus'])
+            ->add($authGate)
+            ->add($csrfMiddleware)
+            ->add(new RateLimitMiddleware($rateLimiter, 'edit', 3600, 60, 'user'));
+
+        $apiStatus = $app->get('/api/circuits/{uuid}/status', [$statusController, 'getStatus']);
+        if (Env::getBool('REQUIRE_AUTH_FOR_VIEW', false)) {
+            $apiStatus->add($authGate);
+        }
+    }
+}

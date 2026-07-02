@@ -1,0 +1,7 @@
+.env
+backend/vendor/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+.DS_Store

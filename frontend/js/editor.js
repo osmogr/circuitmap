@@ -116,10 +116,16 @@
         var statusEl = document.getElementById('edit-status');
         statusEl.textContent = 'Saving...';
 
+        var providerValue = document.getElementById('edit-provider').value;
+
         var payload = {
             name: document.getElementById('edit-name').value,
             description: document.getElementById('edit-description').value,
             tags: document.getElementById('edit-tags').value,
+            provider_id: providerValue === '' ? null : providerValue,
+            provider_circuit_id: document.getElementById('edit-circuit-id').value,
+            order_number: document.getElementById('edit-order-number').value,
+            redundant: document.getElementById('edit-redundant').value,
             geojson: collectFeatureCollection()
         };
 

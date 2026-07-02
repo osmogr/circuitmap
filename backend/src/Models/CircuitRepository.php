@@ -18,16 +18,20 @@ final class CircuitRepository
         ?string $description,
         ?string $tags,
         int $ownerId,
-        string $currentFilePath
+        string $currentFilePath,
+        ?int $providerId = null,
+        ?string $providerCircuitId = null,
+        ?string $orderNumber = null,
+        bool $redundant = false
     ): int {
         $now = gmdate('Y-m-d\TH:i:s\Z');
         $stmt = $this->pdo->prepare(
             'INSERT INTO circuits
                 (uuid, name, description, tags, owner_id, current_file_path, current_version,
-                 status, uploaded_at, updated_at)
+                 status, provider_id, provider_circuit_id, order_number, redundant, uploaded_at, updated_at)
              VALUES
                 (:uuid, :name, :description, :tags, :owner_id, :current_file_path, 1,
-                 \'unknown\', :now, :now)'
+                 \'unknown\', :provider_id, :provider_circuit_id, :order_number, :redundant, :now, :now)'
         );
         $stmt->execute([
             'uuid' => $uuid,
@@ -36,6 +40,10 @@ final class CircuitRepository
             'tags' => $tags,
             'owner_id' => $ownerId,
             'current_file_path' => $currentFilePath,
+            'provider_id' => $providerId,
+            'provider_circuit_id' => $providerCircuitId,
+            'order_number' => $orderNumber,
+            'redundant' => $redundant ? 1 : 0,
             'now' => $now,
         ]);
 
@@ -49,7 +57,8 @@ final class CircuitRepository
     {
         $stmt = $this->pdo->query(
             'SELECT id, uuid, name, description, tags, owner_id, status, status_source,
-                    status_updated_at, color, uploaded_at, updated_at
+                    status_updated_at, color, provider_id, provider_circuit_id, order_number, redundant,
+                    uploaded_at, updated_at
              FROM circuits
              WHERE deleted_at IS NULL
              ORDER BY name'
@@ -73,11 +82,17 @@ final class CircuitRepository
         string $name,
         ?string $description,
         ?string $tags,
-        int $newVersionNumber
+        int $newVersionNumber,
+        ?int $providerId = null,
+        ?string $providerCircuitId = null,
+        ?string $orderNumber = null,
+        bool $redundant = false
     ): void {
         $stmt = $this->pdo->prepare(
             'UPDATE circuits
              SET name = :name, description = :description, tags = :tags,
+                 provider_id = :provider_id, provider_circuit_id = :provider_circuit_id,
+                 order_number = :order_number, redundant = :redundant,
                  current_version = :version, updated_at = :now
              WHERE id = :id'
         );
@@ -85,6 +100,10 @@ final class CircuitRepository
             'name' => $name,
             'description' => $description,
             'tags' => $tags,
+            'provider_id' => $providerId,
+            'provider_circuit_id' => $providerCircuitId,
+            'order_number' => $orderNumber,
+            'redundant' => $redundant ? 1 : 0,
             'version' => $newVersionNumber,
             'now' => gmdate('Y-m-d\TH:i:s\Z'),
             'id' => $id,

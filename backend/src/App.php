@@ -7,6 +7,7 @@ namespace CircuitMap;
 use CircuitMap\Controllers\AdminController;
 use CircuitMap\Controllers\AuthController;
 use CircuitMap\Controllers\CircuitController;
+use CircuitMap\Controllers\CircuitProviderController;
 use CircuitMap\Controllers\EditController;
 use CircuitMap\Controllers\StatusController;
 use CircuitMap\Middleware\AuthGateMiddleware;
@@ -14,6 +15,7 @@ use CircuitMap\Middleware\CsrfMiddleware;
 use CircuitMap\Middleware\ProxyAuthMiddleware;
 use CircuitMap\Middleware\SessionMiddleware;
 use CircuitMap\Models\AuditLogRepository;
+use CircuitMap\Models\CircuitProviderRepository;
 use CircuitMap\Models\CircuitRepository;
 use CircuitMap\Models\CircuitVersionRepository;
 use CircuitMap\Models\UserRepository;
@@ -97,6 +99,7 @@ final class App
         $users = new UserRepository($pdo);
         $circuits = new CircuitRepository($pdo);
         $circuitVersions = new CircuitVersionRepository($pdo);
+        $circuitProviders = new CircuitProviderRepository($pdo);
         $auditLog = new AuditLogRepository($pdo);
         $auth = new AuthService($users);
         $csrf = new CsrfService();
@@ -121,6 +124,7 @@ final class App
             'pdo' => $pdo,
             'userRepo' => $users,
             'circuits' => $circuits,
+            'circuitProviders' => $circuitProviders,
             'auditLog' => $auditLog,
             'auth' => $auth,
             'csrf' => $csrf,
@@ -133,6 +137,7 @@ final class App
                 $auth,
                 $csrf,
                 $circuits,
+                $circuitProviders,
                 $auditLog,
                 $storage,
                 $parser,
@@ -143,10 +148,12 @@ final class App
             ),
             'statusController' => new StatusController($circuits, $auditLog, $statusProvider),
             'adminController' => new AdminController($users, $auditLog, $csrf),
+            'circuitProviderController' => new CircuitProviderController($circuitProviders, $auditLog, $csrf),
             'editController' => new EditController(
                 $auth,
                 $csrf,
                 $circuits,
+                $circuitProviders,
                 $circuitVersions,
                 $auditLog,
                 $storage,

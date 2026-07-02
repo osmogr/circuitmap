@@ -6,6 +6,7 @@ namespace CircuitMap\Tests\Integration;
 
 use CircuitMap\Controllers\EditController;
 use CircuitMap\Models\AuditLogRepository;
+use CircuitMap\Models\CircuitProviderRepository;
 use CircuitMap\Models\CircuitRepository;
 use CircuitMap\Models\CircuitVersionRepository;
 use CircuitMap\Models\UserRepository;
@@ -25,6 +26,7 @@ final class EditFlowTest extends DatabaseTestCase
 {
     private EditController $controller;
     private CircuitRepository $circuits;
+    private CircuitProviderRepository $providers;
     private CircuitVersionRepository $versions;
     private FileStorageService $storage;
     private int $ownerId;
@@ -39,6 +41,7 @@ final class EditFlowTest extends DatabaseTestCase
         $this->ownerId = $this->createUser('owner');
         $this->otherUserId = $this->createUser('other');
         $this->circuits = new CircuitRepository($this->pdo);
+        $this->providers = new CircuitProviderRepository($this->pdo);
         $this->versions = new CircuitVersionRepository($this->pdo);
         $this->storage = new FileStorageService($this->storagePath);
 
@@ -47,6 +50,7 @@ final class EditFlowTest extends DatabaseTestCase
             $auth,
             new CsrfService(),
             $this->circuits,
+            $this->providers,
             $this->versions,
             new AuditLogRepository($this->pdo),
             $this->storage,
@@ -118,6 +122,104 @@ final class EditFlowTest extends DatabaseTestCase
 
         $archivedContent = $this->storage->readVersion($this->uuid, 1);
         $this->assertStringContainsString('Segment A', $archivedContent);
+    }
+
+    public function testProviderAndOrderFieldsRoundTrip(): void
+    {
+        $providerId = $this->providers->insert('Acme Telecom', '1-800-555-0100', 'ACC-1', 'Jane Rep');
+
+        $payload = [
+            'name' => 'Updated Name',
+            'provider_id' => (string) $providerId,
+            'provider_circuit_id' => 'CKT-123',
+            'order_number' => 'ORD-456',
+            'redundant' => '1',
+            'geojson' => [
+                'type' => 'FeatureCollection',
+                'features' => [[
+                    'type' => 'Feature',
+                    'properties' => ['name' => 'Moved', 'description' => ''],
+                    'geometry' => ['type' => 'Point', 'coordinates' => [1.0, 2.0]],
+                ]],
+            ],
+        ];
+
+        $response = $this->controller->update(
+            $this->requestFor($this->ownerId, $payload),
+            (new ResponseFactory())->createResponse(),
+            ['uuid' => $this->uuid]
+        );
+
+        $this->assertSame(200, $response->getStatusCode());
+
+        $circuit = $this->circuits->findByUuid($this->uuid);
+        $this->assertSame($providerId, (int) $circuit['provider_id']);
+        $this->assertSame('CKT-123', $circuit['provider_circuit_id']);
+        $this->assertSame('ORD-456', $circuit['order_number']);
+        $this->assertSame(1, (int) $circuit['redundant']);
+    }
+
+    public function testSavingWithoutChangingAnAlreadyDeactivatedProviderIsAllowed(): void
+    {
+        $providerId = $this->providers->insert('Acme Telecom', null, null, null);
+        $this->circuits->updateAfterEdit(
+            $this->circuitId,
+            'Original Name',
+            'Original description',
+            null,
+            1,
+            $providerId
+        );
+        $this->providers->setActive($providerId, false);
+
+        $payload = [
+            'name' => 'Original Name',
+            'provider_id' => (string) $providerId,
+            'geojson' => [
+                'type' => 'FeatureCollection',
+                'features' => [[
+                    'type' => 'Feature',
+                    'properties' => ['name' => 'Moved', 'description' => ''],
+                    'geometry' => ['type' => 'Point', 'coordinates' => [1.0, 2.0]],
+                ]],
+            ],
+        ];
+
+        $response = $this->controller->update(
+            $this->requestFor($this->ownerId, $payload),
+            (new ResponseFactory())->createResponse(),
+            ['uuid' => $this->uuid]
+        );
+
+        $this->assertSame(200, $response->getStatusCode());
+        $circuit = $this->circuits->findByUuid($this->uuid);
+        $this->assertSame($providerId, (int) $circuit['provider_id']);
+    }
+
+    public function testSwitchingToADeactivatedProviderIsRejected(): void
+    {
+        $providerId = $this->providers->insert('Acme Telecom', null, null, null);
+        $this->providers->setActive($providerId, false);
+
+        $payload = [
+            'name' => 'Original Name',
+            'provider_id' => (string) $providerId,
+            'geojson' => ['type' => 'FeatureCollection', 'features' => [[
+                'type' => 'Feature',
+                'properties' => ['name' => 'Moved', 'description' => ''],
+                'geometry' => ['type' => 'Point', 'coordinates' => [1.0, 2.0]],
+            ]]],
+        ];
+
+        $response = $this->controller->update(
+            $this->requestFor($this->ownerId, $payload),
+            (new ResponseFactory())->createResponse(),
+            ['uuid' => $this->uuid]
+        );
+
+        $this->assertSame(422, $response->getStatusCode());
+        $circuit = $this->circuits->findByUuid($this->uuid);
+        $this->assertNull($circuit['provider_id']);
     }
 
     public function testNonOwnerEditIsRejectedWithNoSideEffects(): void

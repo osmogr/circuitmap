@@ -1,6 +1,8 @@
 <?php
 /** @var string $csrfToken */
 /** @var string|null $error */
+/** @var array<int, array<string, mixed>> $providers */
+/** @var array<string, mixed>|null $currentUser */
 
 use CircuitMap\Support\View;
 ?>
@@ -22,6 +24,33 @@ use CircuitMap\Support\View;
         <label>
             Tags
             <input type="text" name="tags" placeholder="comma, separated, tags">
+        </label>
+        <label>
+            Circuit Provider
+            <select name="provider_id">
+                <option value="">— none —</option>
+                <?php foreach ($providers as $provider): ?>
+                    <option value="<?= (int) $provider['id'] ?>"><?= View::escape($provider['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+        <?php if (($currentUser['role'] ?? null) === 'admin'): ?>
+            <p class="hint"><a href="/admin/providers">Manage circuit providers</a></p>
+        <?php endif; ?>
+        <label>
+            Circuit ID
+            <input type="text" name="provider_circuit_id" maxlength="200">
+        </label>
+        <label>
+            Order Number
+            <input type="text" name="order_number" maxlength="200">
+        </label>
+        <label>
+            Redundant
+            <select name="redundant">
+                <option value="0" selected>No</option>
+                <option value="1">Yes</option>
+            </select>
         </label>
         <p class="hint">
             This creates an empty circuit. You'll draw its geometry in the editor next.

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CircuitMap\Controllers;
 
 use CircuitMap\Models\AuditLogRepository;
+use CircuitMap\Models\CircuitProviderRepository;
 use CircuitMap\Models\CircuitRepository;
 use CircuitMap\Services\Auth\AuthService;
 use CircuitMap\Services\Auth\CsrfService;
@@ -46,6 +47,7 @@ final class CircuitController
         private readonly AuthService $auth,
         private readonly CsrfService $csrf,
         private readonly CircuitRepository $circuits,
+        private readonly CircuitProviderRepository $providers,
         private readonly AuditLogRepository $auditLog,
         private readonly FileStorageService $storage,
         private readonly KmlParser $parser,
@@ -65,6 +67,8 @@ final class CircuitController
             'currentUser' => $currentUser,
             'content' => View::render('upload', [
                 'csrfToken' => $this->csrf->getToken(),
+                'currentUser' => $currentUser,
+                'providers' => $this->providers->listActive(),
                 'error' => null,
             ]),
         ]);
@@ -81,6 +85,8 @@ final class CircuitController
             'currentUser' => $currentUser,
             'content' => View::render('new', [
                 'csrfToken' => $this->csrf->getToken(),
+                'currentUser' => $currentUser,
+                'providers' => $this->providers->listActive(),
                 'error' => null,
             ]),
         ]);
@@ -104,9 +110,17 @@ final class CircuitController
         $name = is_string($body['name'] ?? null) ? trim($body['name']) : '';
         $description = is_string($body['description'] ?? null) ? trim($body['description']) : null;
         $tags = is_string($body['tags'] ?? null) ? trim($body['tags']) : null;
+        $providerCircuitId = is_string($body['provider_circuit_id'] ?? null) ? trim($body['provider_circuit_id']) : null;
+        $orderNumber = is_string($body['order_number'] ?? null) ? trim($body['order_number']) : null;
+        $redundant = ($body['redundant'] ?? '') === '1';
 
         if ($name === '') {
             return $this->renderNewError($response, 'A circuit name is required.', 422);
+        }
+
+        [$providerId, $providerError] = $this->resolveProviderId($body['provider_id'] ?? null);
+        if ($providerError !== null) {
+            return $this->renderNewError($response, $providerError, 422);
         }
 
         $dom = $this->geoJsonConverter->toKml(['features' => []]);
@@ -120,7 +134,11 @@ final class CircuitController
             $description,
             $tags,
             (int) $currentUser['id'],
-            $relativePath
+            $relativePath,
+            $providerId,
+            $providerCircuitId === '' ? null : $providerCircuitId,
+            $orderNumber === '' ? null : $orderNumber,
+            $redundant
         );
 
         $this->auditLog->log(
@@ -141,6 +159,9 @@ final class CircuitController
         $name = is_string($body['name'] ?? null) ? trim($body['name']) : '';
         $description = is_string($body['description'] ?? null) ? trim($body['description']) : null;
         $tags = is_string($body['tags'] ?? null) ? trim($body['tags']) : null;
+        $providerCircuitId = is_string($body['provider_circuit_id'] ?? null) ? trim($body['provider_circuit_id']) : null;
+        $orderNumber = is_string($body['order_number'] ?? null) ? trim($body['order_number']) : null;
+        $redundant = ($body['redundant'] ?? '') === '1';
 
         $files = $request->getUploadedFiles();
         $file = $files['kml_file'] ?? null;
@@ -148,6 +169,11 @@ final class CircuitController
         $error = $this->validateUploadInputs($name, $file);
         if ($error !== null) {
             return $this->renderUploadError($response, $error, 422);
+        }
+
+        [$providerId, $providerError] = $this->resolveProviderId($body['provider_id'] ?? null);
+        if ($providerError !== null) {
+            return $this->renderUploadError($response, $providerError, 422);
         }
 
         $extension = strtolower((string) pathinfo((string) $file->getClientFilename(), PATHINFO_EXTENSION));
@@ -177,7 +203,11 @@ final class CircuitController
             $description,
             $tags,
             (int) $currentUser['id'],
-            $relativePath
+            $relativePath,
+            $providerId,
+            $providerCircuitId === '' ? null : $providerCircuitId,
+            $orderNumber === '' ? null : $orderNumber,
+            $redundant
         );
 
         $this->auditLog->log(
@@ -257,6 +287,25 @@ final class CircuitController
         return ResponseHelper::json(['status' => 'ok']);
     }
 
+    /**
+     * @param mixed $rawProviderId
+     * @return array{0: ?int, 1: ?string} [providerId, errorMessage]
+     */
+    private function resolveProviderId($rawProviderId): array
+    {
+        if (!is_string($rawProviderId) || trim($rawProviderId) === '') {
+            return [null, null];
+        }
+
+        $providerId = (int) $rawProviderId;
+        $provider = $this->providers->findById($providerId);
+        if ($provider === null || (int) $provider['is_active'] !== 1) {
+            return [null, 'Selected circuit provider is invalid.'];
+        }
+
+        return [$providerId, null];
+    }
+
     private function readAndSniffKml(UploadedFileInterface $file): string
     {
         $rawXml = (string) $file->getStream()->getContents();
@@ -327,6 +376,8 @@ final class CircuitController
             'currentUser' => $currentUser,
             'content' => View::render('upload', [
                 'csrfToken' => $this->csrf->getToken(),
+                'currentUser' => $currentUser,
+                'providers' => $this->providers->listActive(),
                 'error' => $message,
             ]),
         ]);
@@ -343,6 +394,8 @@ final class CircuitController
             'currentUser' => $currentUser,
             'content' => View::render('new', [
                 'csrfToken' => $this->csrf->getToken(),
+                'currentUser' => $currentUser,
+                'providers' => $this->providers->listActive(),
                 'error' => $message,
             ]),
         ]);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CircuitMap\Tests\Integration;
 
 use CircuitMap\Models\AuditLogRepository;
+use CircuitMap\Models\CircuitProviderRepository;
 use CircuitMap\Models\CircuitRepository;
 use CircuitMap\Services\Auth\AuthService;
 use CircuitMap\Services\Auth\CsrfService;
@@ -33,6 +34,7 @@ final class UploadFlowTest extends DatabaseTestCase
 {
     private CircuitController $controller;
     private CircuitRepository $circuits;
+    private CircuitProviderRepository $providers;
     private int $userId;
 
     protected function setUp(): void
@@ -41,12 +43,14 @@ final class UploadFlowTest extends DatabaseTestCase
 
         $this->userId = $this->createUser();
         $this->circuits = new CircuitRepository($this->pdo);
+        $this->providers = new CircuitProviderRepository($this->pdo);
         $auth = new AuthService(new UserRepository($this->pdo));
 
         $this->controller = new CircuitController(
             $auth,
             new CsrfService(),
             $this->circuits,
+            $this->providers,
             new AuditLogRepository($this->pdo),
             new FileStorageService($this->storagePath),
             new KmlParser(),
@@ -134,6 +138,32 @@ final class UploadFlowTest extends DatabaseTestCase
 
         $this->assertSame(422, $response->getStatusCode());
         $this->assertCount(0, $this->circuits->listVisible());
+    }
+
+    public function testProviderAndOrderFieldsRoundTrip(): void
+    {
+        $providerId = $this->providers->insert('Acme Telecom', null, null, null);
+
+        $request = $this->requestWithUpload(
+            [
+                'name' => 'Provisioned Circuit',
+                'provider_id' => (string) $providerId,
+                'provider_circuit_id' => 'CKT-123',
+                'order_number' => 'ORD-456',
+                'redundant' => '1',
+            ],
+            $this->uploadedFileFrom($this->fixture('valid_simple.kml'))
+        );
+
+        $response = $this->controller->upload($request, (new ResponseFactory())->createResponse());
+
+        $this->assertSame(302, $response->getStatusCode());
+
+        $circuit = $this->circuits->listVisible()[0];
+        $this->assertSame($providerId, (int) $circuit['provider_id']);
+        $this->assertSame('CKT-123', $circuit['provider_circuit_id']);
+        $this->assertSame('ORD-456', $circuit['order_number']);
+        $this->assertSame(1, (int) $circuit['redundant']);
     }
 
     public function testDescriptionIsSanitizedInStoredFile(): void

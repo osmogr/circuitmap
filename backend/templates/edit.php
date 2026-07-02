@@ -1,6 +1,8 @@
 <?php
 /** @var string $csrfToken */
 /** @var array<string, mixed> $circuit */
+/** @var array<int, array<string, mixed>> $providers */
+/** @var array<string, mixed>|null $currentUser */
 
 use CircuitMap\Support\View;
 ?>
@@ -21,6 +23,35 @@ use CircuitMap\Support\View;
         <label>
             Tags
             <input type="text" id="edit-tags" value="<?= View::escape($circuit['tags'] ?? '') ?>">
+        </label>
+        <label>
+            Circuit Provider
+            <select id="edit-provider">
+                <option value="">— none —</option>
+                <?php foreach ($providers as $provider): ?>
+                    <option value="<?= (int) $provider['id'] ?>" <?= (int) ($circuit['provider_id'] ?? 0) === (int) $provider['id'] ? 'selected' : '' ?>>
+                        <?= View::escape($provider['name']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+        <?php if (($currentUser['role'] ?? null) === 'admin'): ?>
+            <p class="hint"><a href="/admin/providers">Manage circuit providers</a></p>
+        <?php endif; ?>
+        <label>
+            Circuit ID
+            <input type="text" id="edit-circuit-id" value="<?= View::escape($circuit['provider_circuit_id'] ?? '') ?>" maxlength="200">
+        </label>
+        <label>
+            Order Number
+            <input type="text" id="edit-order-number" value="<?= View::escape($circuit['order_number'] ?? '') ?>" maxlength="200">
+        </label>
+        <label>
+            Redundant
+            <select id="edit-redundant">
+                <option value="0" <?= (int) ($circuit['redundant'] ?? 0) === 0 ? 'selected' : '' ?>>No</option>
+                <option value="1" <?= (int) ($circuit['redundant'] ?? 0) === 1 ? 'selected' : '' ?>>Yes</option>
+            </select>
         </label>
         <label>
             Status

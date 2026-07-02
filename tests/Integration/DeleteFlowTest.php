@@ -6,6 +6,7 @@ namespace CircuitMap\Tests\Integration;
 
 use CircuitMap\Controllers\CircuitController;
 use CircuitMap\Models\AuditLogRepository;
+use CircuitMap\Models\CircuitProviderRepository;
 use CircuitMap\Models\CircuitRepository;
 use CircuitMap\Models\UserRepository;
 use CircuitMap\Services\Auth\AuthService;
@@ -42,6 +43,7 @@ final class DeleteFlowTest extends DatabaseTestCase
             $auth,
             new CsrfService(),
             $this->circuits,
+            new CircuitProviderRepository($this->pdo),
             new AuditLogRepository($this->pdo),
             new FileStorageService($this->storagePath),
             new KmlParser(),

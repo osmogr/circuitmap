@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CircuitMap\Controllers;
 
 use CircuitMap\Models\AuditLogRepository;
+use CircuitMap\Models\CircuitProviderRepository;
 use CircuitMap\Models\CircuitRepository;
 use CircuitMap\Models\CircuitVersionRepository;
 use CircuitMap\Services\Auth\AuthService;
@@ -28,6 +29,7 @@ final class EditController
         private readonly AuthService $auth,
         private readonly CsrfService $csrf,
         private readonly CircuitRepository $circuits,
+        private readonly CircuitProviderRepository $providers,
         private readonly CircuitVersionRepository $versions,
         private readonly AuditLogRepository $auditLog,
         private readonly FileStorageService $storage,
@@ -62,6 +64,8 @@ final class EditController
             'content' => View::render('edit', [
                 'csrfToken' => $this->csrf->getToken(),
                 'circuit' => $circuit,
+                'currentUser' => $currentUser,
+                'providers' => $this->providersForEditForm($circuit),
             ]),
         ]);
         $response->getBody()->write($html);
@@ -96,6 +100,9 @@ final class EditController
         $name = is_string($body['name'] ?? null) ? trim($body['name']) : '';
         $description = is_string($body['description'] ?? null) ? trim($body['description']) : null;
         $tags = is_string($body['tags'] ?? null) ? trim($body['tags']) : null;
+        $providerCircuitId = is_string($body['provider_circuit_id'] ?? null) ? trim($body['provider_circuit_id']) : null;
+        $orderNumber = is_string($body['order_number'] ?? null) ? trim($body['order_number']) : null;
+        $redundant = ($body['redundant'] ?? '') === '1';
         $geojson = is_array($body['geojson'] ?? null) ? $body['geojson'] : null;
 
         if ($name === '') {
@@ -103,6 +110,17 @@ final class EditController
         }
         if ($geojson === null) {
             return ResponseHelper::json(['error' => 'Missing geometry payload.'], 422);
+        }
+
+        $providerId = null;
+        $rawProviderId = $body['provider_id'] ?? null;
+        if ($rawProviderId !== null && $rawProviderId !== '') {
+            $providerId = (int) $rawProviderId;
+            $provider = $this->providers->findById($providerId);
+            $keepingExistingProvider = $providerId === (int) ($circuit['provider_id'] ?? 0);
+            if ($provider === null || (!$keepingExistingProvider && (int) $provider['is_active'] !== 1)) {
+                return ResponseHelper::json(['error' => 'Selected circuit provider is invalid.'], 422);
+            }
         }
 
         try {
@@ -132,7 +150,17 @@ final class EditController
         );
 
         $this->storage->overwriteCurrent($uuid, $normalizedXml);
-        $this->circuits->updateAfterEdit((int) $circuit['id'], $name, $description, $tags, $newVersionNumber);
+        $this->circuits->updateAfterEdit(
+            (int) $circuit['id'],
+            $name,
+            $description,
+            $tags,
+            $newVersionNumber,
+            $providerId,
+            $providerCircuitId === '' ? null : $providerCircuitId,
+            $orderNumber === '' ? null : $orderNumber,
+            $redundant
+        );
 
         $this->auditLog->log(
             (int) $currentUser['id'],
@@ -217,5 +245,32 @@ final class EditController
         );
 
         return ResponseHelper::json(['status' => 'ok', 'version' => $newVersionNumber]);
+    }
+
+    /**
+     * @param array<string, mixed> $circuit
+     * @return array<int, array<string, mixed>>
+     */
+    private function providersForEditForm(array $circuit): array
+    {
+        $providers = $this->providers->listActive();
+
+        // A circuit can be pointing at a provider that's since been
+        // deactivated; it must still appear (and stay selected) in the
+        // dropdown, otherwise saving the form again would silently clear
+        // the circuit's provider_id.
+        $currentProviderId = $circuit['provider_id'] ?? null;
+        if ($currentProviderId !== null) {
+            $alreadyListed = array_filter($providers, static fn (array $p) => (int) $p['id'] === (int) $currentProviderId);
+            if ($alreadyListed === []) {
+                $current = $this->providers->findById((int) $currentProviderId);
+                if ($current !== null) {
+                    $current['name'] .= ' (inactive)';
+                    $providers[] = $current;
+                }
+            }
+        }
+
+        return $providers;
     }
 }

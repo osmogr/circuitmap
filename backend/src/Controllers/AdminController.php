@@ -46,20 +46,20 @@ final class AdminController
     {
         $currentUser = $request->getAttribute('currentUser');
         $body = (array) $request->getParsedBody();
-        $email = is_string($body['email'] ?? null) ? trim($body['email']) : '';
+        $username = is_string($body['username'] ?? null) ? trim($body['username']) : '';
         $password = is_string($body['password'] ?? null) ? $body['password'] : '';
         $role = is_string($body['role'] ?? null) ? $body['role'] : '';
 
-        $error = $this->validateNewUser($email, $password, $role);
+        $error = $this->validateNewUser($username, $password, $role);
         if ($error !== null) {
             return $this->renderUsersPage($response, $currentUser, $error, 422);
         }
 
-        if ($this->users->findByEmail($email) !== null) {
-            return $this->renderUsersPage($response, $currentUser, 'That email is already registered.', 422);
+        if ($this->users->findByUsername($username) !== null) {
+            return $this->renderUsersPage($response, $currentUser, 'That username is already registered.', 422);
         }
 
-        $newUserId = $this->users->create($email, password_hash($password, PASSWORD_DEFAULT), $role);
+        $newUserId = $this->users->create($username, password_hash($password, PASSWORD_DEFAULT), $role);
         $this->auditLog->log(
             (int) $currentUser['id'],
             'user_create',
@@ -87,7 +87,7 @@ final class AdminController
 
         // An admin can't demote themselves via this form; that would risk
         // locking every admin out with no one left to reverse it. Use
-        // another admin account, or the INITIAL_ADMIN_EMAIL bootstrap path
+        // another admin account, or the INITIAL_ADMIN_USERNAME bootstrap path
         // against a fresh database, to change the last admin's role.
         if ($targetId === (int) $currentUser['id'] && $role !== 'admin') {
             return $this->renderUsersPage($response, $currentUser, 'You cannot remove your own admin role.', 422);
@@ -170,10 +170,10 @@ final class AdminController
         return $response->withHeader('Content-Type', 'text/html; charset=utf-8')->withStatus($status);
     }
 
-    private function validateNewUser(string $email, string $password, string $role): ?string
+    private function validateNewUser(string $username, string $password, string $role): ?string
     {
-        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            return 'A valid email is required.';
+        if ($username === '' || strlen($username) > 190) {
+            return 'A valid username is required.';
         }
         if (strlen($password) < 12) {
             return 'Password must be at least 12 characters.';

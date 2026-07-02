@@ -26,7 +26,7 @@ operations.
    cp .env.example .env
    ```
 
-   At minimum, set `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD`
+   At minimum, set `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD`
    (12+ characters). These are only consumed once, on first boot, to
    create the initial admin account if the `users` table is empty.
 
@@ -56,7 +56,7 @@ container start (`docker/app/entrypoint.sh`), and are idempotent (a
 | `APP_DEBUG` | `false` | Show detailed error responses. Keep `false` outside local dev. |
 | `REQUIRE_AUTH_FOR_VIEW` | `false` | If `true`, viewing the map/API also requires login, not just upload/edit/delete. |
 | `COOKIE_SECURE` | `true` | Marks the session cookie `Secure` (HTTPS only). Set `false` only for plain-HTTP local testing. |
-| `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD` | (required) | Bootstrap admin account, created once if `users` is empty. |
+| `INITIAL_ADMIN_USERNAME` / `INITIAL_ADMIN_PASSWORD` | (required) | Bootstrap admin account, created once if `users` is empty. |
 | `MAX_UPLOAD_BYTES` | `10485760` (10 MB) | Application-level upload size cap, in addition to nginx/php.ini limits baked into the image. |
 
 The app is designed to sit behind an existing reverse proxy (nginx/Caddy)

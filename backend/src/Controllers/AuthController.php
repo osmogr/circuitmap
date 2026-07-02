@@ -45,14 +45,14 @@ final class AuthController
     public function login(Request $request, Response $response): Response
     {
         $body = (array) $request->getParsedBody();
-        $email = is_string($body['email'] ?? null) ? trim($body['email']) : '';
+        $username = is_string($body['username'] ?? null) ? trim($body['username']) : '';
         $password = is_string($body['password'] ?? null) ? $body['password'] : '';
         $ip = ClientIp::from($request);
 
-        $user = $email !== '' && $password !== '' ? $this->auth->attemptLogin($email, $password) : null;
+        $user = $username !== '' && $password !== '' ? $this->auth->attemptLogin($username, $password) : null;
 
         if ($user === null) {
-            $this->auditLog->log(null, 'login_failure', null, "email={$email}", $ip);
+            $this->auditLog->log(null, 'login_failure', null, "username={$username}", $ip);
 
             $html = View::render('layout', [
                 'title' => 'Log in',
@@ -60,7 +60,7 @@ final class AuthController
                 'currentUser' => null,
                 'content' => View::render('login', [
                     'csrfToken' => $this->csrf->getToken(),
-                    'error' => 'Invalid email or password.',
+                    'error' => 'Invalid username or password.',
                 ]),
             ]);
             $response->getBody()->write($html);

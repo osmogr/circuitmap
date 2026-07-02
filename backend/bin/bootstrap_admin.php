@@ -15,11 +15,11 @@ if ($users->countAll() > 0) {
     exit(0);
 }
 
-$email = Env::get('INITIAL_ADMIN_EMAIL');
+$username = Env::get('INITIAL_ADMIN_USERNAME');
 $password = Env::get('INITIAL_ADMIN_PASSWORD');
 
-if ($email === null || $password === null) {
-    fwrite(STDERR, "No users exist and INITIAL_ADMIN_EMAIL/INITIAL_ADMIN_PASSWORD are not set. Cannot bootstrap.\n");
+if ($username === null || $password === null) {
+    fwrite(STDERR, "No users exist and INITIAL_ADMIN_USERNAME/INITIAL_ADMIN_PASSWORD are not set. Cannot bootstrap.\n");
     exit(1);
 }
 
@@ -28,5 +28,5 @@ if (strlen($password) < 12) {
     exit(1);
 }
 
-$users->create($email, password_hash($password, PASSWORD_DEFAULT), 'admin', 'Administrator');
-fwrite(STDOUT, "Created initial admin account: {$email}\n");
+$users->create($username, password_hash($password, PASSWORD_DEFAULT), 'admin', 'Administrator');
+fwrite(STDOUT, "Created initial admin account: {$username}\n");

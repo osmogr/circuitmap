@@ -56,7 +56,7 @@ final class NewCircuitFlowTest extends DatabaseTestCase
     {
         return (new ServerRequestFactory())->createServerRequest('POST', '/circuits/new')
             ->withParsedBody($formFields)
-            ->withAttribute('currentUser', ['id' => $this->userId, 'email' => 'test@example.com', 'role' => 'editor']);
+            ->withAttribute('currentUser', ['id' => $this->userId, 'username' => 'testuser', 'role' => 'editor']);
     }
 
     public function testCreateBlankCreatesEmptyCircuitAndRedirectsToEditor(): void

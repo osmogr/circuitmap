@@ -16,7 +16,7 @@ use CircuitMap\Support\View;
     <table>
         <thead>
             <tr>
-                <th>Email</th>
+                <th>Username</th>
                 <th>Role</th>
                 <th>Active</th>
                 <th>Last login</th>
@@ -26,7 +26,7 @@ use CircuitMap\Support\View;
         <tbody>
             <?php foreach ($users as $user): ?>
                 <tr>
-                    <td><?= View::escape($user['email']) ?></td>
+                    <td><?= View::escape($user['username']) ?></td>
                     <td><?= View::escape($user['role']) ?></td>
                     <td><?= $user['is_active'] ? 'Yes' : 'No' ?></td>
                     <td><?= View::escape($user['last_login_at'] ?? 'never') ?></td>
@@ -53,8 +53,8 @@ use CircuitMap\Support\View;
     <form method="post" action="/admin/users" class="new-user-form">
         <input type="hidden" name="csrf_token" value="<?= View::escape($csrfToken) ?>">
         <label>
-            Email
-            <input type="email" name="email" required>
+            Username
+            <input type="text" name="username" required>
         </label>
         <label>
             Password

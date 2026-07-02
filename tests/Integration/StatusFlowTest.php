@@ -26,8 +26,8 @@ final class StatusFlowTest extends DatabaseTestCase
     {
         parent::setUp();
 
-        $this->ownerId = $this->createUser('owner@example.com');
-        $this->otherUserId = $this->createUser('other@example.com');
+        $this->ownerId = $this->createUser('owner');
+        $this->otherUserId = $this->createUser('other');
         $this->circuits = new CircuitRepository($this->pdo);
 
         $this->controller = new StatusController(

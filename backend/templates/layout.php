@@ -23,7 +23,7 @@ use CircuitMap\Support\View;
                 <?php if (($currentUser['role'] ?? null) === 'admin'): ?>
                     <a href="/admin/users">Admin</a>
                 <?php endif; ?>
-                <span class="nav-user"><?= View::escape($currentUser['email']) ?></span>
+                <span class="nav-user"><?= View::escape($currentUser['username']) ?></span>
                 <form method="post" action="/logout" class="nav-logout-form">
                     <input type="hidden" name="csrf_token" value="<?= View::escape($csrfToken) ?>">
                     <button type="submit">Log out</button>

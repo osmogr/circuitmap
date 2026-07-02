@@ -18,14 +18,14 @@ final class UserRepository
         return (int) $stmt->fetchColumn();
     }
 
-    public function create(string $email, string $passwordHash, string $role, ?string $displayName = null): int
+    public function create(string $username, string $passwordHash, string $role, ?string $displayName = null): int
     {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO users (email, password_hash, role, display_name, is_active, created_at)
-             VALUES (:email, :password_hash, :role, :display_name, 1, :created_at)'
+            'INSERT INTO users (username, password_hash, role, display_name, is_active, created_at)
+             VALUES (:username, :password_hash, :role, :display_name, 1, :created_at)'
         );
         $stmt->execute([
-            'email' => $email,
+            'username' => $username,
             'password_hash' => $passwordHash,
             'role' => $role,
             'display_name' => $displayName,
@@ -38,10 +38,10 @@ final class UserRepository
     /**
      * @return array<string, mixed>|null
      */
-    public function findByEmail(string $email): ?array
+    public function findByUsername(string $username): ?array
     {
-        $stmt = $this->pdo->prepare('SELECT * FROM users WHERE email = :email LIMIT 1');
-        $stmt->execute(['email' => $email]);
+        $stmt = $this->pdo->prepare('SELECT * FROM users WHERE username = :username LIMIT 1');
+        $stmt->execute(['username' => $username]);
         $row = $stmt->fetch();
         return $row === false ? null : $row;
     }
@@ -71,8 +71,8 @@ final class UserRepository
      */
     public function listAll(): array
     {
-        $stmt = $this->pdo->query('SELECT id, email, role, display_name, is_active, created_at, last_login_at
-                                    FROM users ORDER BY email');
+        $stmt = $this->pdo->query('SELECT id, username, role, display_name, is_active, created_at, last_login_at
+                                    FROM users ORDER BY username');
         return $stmt->fetchAll();
     }
 

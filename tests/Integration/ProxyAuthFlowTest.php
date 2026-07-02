@@ -42,9 +42,9 @@ final class ProxyAuthFlowTest extends DatabaseTestCase
 
     public function testAutoProvisionsNewUserWithDefaultRole(): void
     {
-        $this->auth->syncFromProxyHeader('newperson@example.com', 'editor');
+        $this->auth->syncFromProxyHeader('newperson', 'editor');
 
-        $user = $this->users->findByEmail('newperson@example.com');
+        $user = $this->users->findByUsername('newperson');
         $this->assertNotNull($user);
         $this->assertSame('editor', $user['role']);
         $this->assertSame((int) $user['id'], $_SESSION['user_id']);
@@ -52,9 +52,9 @@ final class ProxyAuthFlowTest extends DatabaseTestCase
 
     public function testReusesExistingUserInsteadOfDuplicating(): void
     {
-        $existingId = $this->createUser('existing@example.com', 'admin');
+        $existingId = $this->createUser('existing', 'admin');
 
-        $this->auth->syncFromProxyHeader('existing@example.com', 'editor');
+        $this->auth->syncFromProxyHeader('existing', 'editor');
 
         $this->assertSame($existingId, $_SESSION['user_id']);
         $this->assertSame('admin', $_SESSION['role']);
@@ -63,17 +63,17 @@ final class ProxyAuthFlowTest extends DatabaseTestCase
 
     public function testDeactivatedUserIsNotLoggedIn(): void
     {
-        $id = $this->createUser('inactive@example.com');
+        $id = $this->createUser('inactive');
         $this->users->setActive($id, false);
 
-        $this->auth->syncFromProxyHeader('inactive@example.com', 'editor');
+        $this->auth->syncFromProxyHeader('inactive', 'editor');
 
         $this->assertArrayNotHasKey('user_id', $_SESSION);
     }
 
     public function testMiddlewareIgnoresRequestsWithoutTheHeader(): void
     {
-        $middleware = new ProxyAuthMiddleware($this->auth, 'X-Forwarded-Email', 'editor');
+        $middleware = new ProxyAuthMiddleware($this->auth, 'REMOTE_USER', 'editor');
         $request = (new ServerRequestFactory())->createServerRequest('GET', '/');
         $handlerCalled = false;
 
@@ -95,9 +95,9 @@ final class ProxyAuthFlowTest extends DatabaseTestCase
 
     public function testMiddlewareLogsInFromHeader(): void
     {
-        $middleware = new ProxyAuthMiddleware($this->auth, 'X-Forwarded-Email', 'editor');
+        $middleware = new ProxyAuthMiddleware($this->auth, 'REMOTE_USER', 'editor');
         $request = (new ServerRequestFactory())->createServerRequest('GET', '/')
-            ->withHeader('X-Forwarded-Email', 'proxied@example.com');
+            ->withHeader('REMOTE_USER', 'proxieduser');
 
         $middleware->process($request, new class implements \Psr\Http\Server\RequestHandlerInterface {
             public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface
@@ -106,7 +106,7 @@ final class ProxyAuthFlowTest extends DatabaseTestCase
             }
         });
 
-        $user = $this->users->findByEmail('proxied@example.com');
+        $user = $this->users->findByUsername('proxieduser');
         $this->assertNotNull($user);
         $this->assertSame((int) $user['id'], $_SESSION['user_id']);
     }

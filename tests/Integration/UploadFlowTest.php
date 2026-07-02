@@ -72,7 +72,7 @@ final class UploadFlowTest extends DatabaseTestCase
         $request = (new ServerRequestFactory())->createServerRequest('POST', '/upload')
             ->withParsedBody($formFields)
             ->withUploadedFiles(['kml_file' => $file])
-            ->withAttribute('currentUser', ['id' => $this->userId, 'email' => 'test@example.com', 'role' => 'editor']);
+            ->withAttribute('currentUser', ['id' => $this->userId, 'username' => 'testuser', 'role' => 'editor']);
 
         return $request;
     }

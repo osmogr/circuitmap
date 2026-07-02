@@ -59,14 +59,14 @@ abstract class DatabaseTestCase extends TestCase
         rmdir($dir);
     }
 
-    protected function createUser(string $email = 'test@example.com', string $role = 'editor'): int
+    protected function createUser(string $username = 'testuser', string $role = 'editor'): int
     {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO users (email, password_hash, role, is_active, created_at)
-             VALUES (:email, :hash, :role, 1, :now)'
+            'INSERT INTO users (username, password_hash, role, is_active, created_at)
+             VALUES (:username, :hash, :role, 1, :now)'
         );
         $stmt->execute([
-            'email' => $email,
+            'username' => $username,
             'hash' => password_hash('irrelevant-in-tests', PASSWORD_DEFAULT),
             'role' => $role,
             'now' => gmdate('Y-m-d\TH:i:s\Z'),

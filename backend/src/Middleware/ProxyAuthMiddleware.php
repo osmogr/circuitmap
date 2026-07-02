@@ -40,9 +40,9 @@ final class ProxyAuthMiddleware implements MiddlewareInterface
 
     public function process(Request $request, RequestHandler $handler): Response
     {
-        $email = trim($request->getHeaderLine($this->headerName));
-        if ($email !== '') {
-            $this->auth->syncFromProxyHeader($email, $this->defaultRole);
+        $username = trim($request->getHeaderLine($this->headerName));
+        if ($username !== '') {
+            $this->auth->syncFromProxyHeader($username, $this->defaultRole);
         }
 
         return $handler->handle($request);

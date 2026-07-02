@@ -12,8 +12,8 @@ use CircuitMap\Support\View;
     <form method="post" action="/login">
         <input type="hidden" name="csrf_token" value="<?= View::escape($csrfToken) ?>">
         <label>
-            Email
-            <input type="email" name="email" required autofocus>
+            Username
+            <input type="text" name="username" required autofocus>
         </label>
         <label>
             Password

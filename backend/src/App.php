@@ -71,7 +71,7 @@ final class App
 
             $app->add(new ProxyAuthMiddleware(
                 $services['auth'],
-                Env::get('PROXY_AUTH_HEADER', 'X-Forwarded-Email'),
+                Env::get('PROXY_AUTH_HEADER', 'REMOTE_USER'),
                 $defaultRole
             ));
         }

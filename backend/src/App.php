@@ -32,6 +32,7 @@ use CircuitMap\Services\Kml\KmzExtractor;
 use CircuitMap\Services\RateLimit\RateLimiterService;
 use CircuitMap\Services\Status\ManualStatusProvider;
 use CircuitMap\Services\Storage\FileStorageService;
+use CircuitMap\Support\BasePath;
 use CircuitMap\Support\Database;
 use CircuitMap\Support\Env;
 use CircuitMap\Support\View;
@@ -44,12 +45,14 @@ final class App
 {
     public static function create(): SlimApp
     {
+        BasePath::configure(Env::get('BASE_PATH', ''));
         View::setTemplatesPath(dirname(__DIR__) . '/templates');
 
         $pdo = Database::connection();
         $services = self::buildServices($pdo);
 
         $app = AppFactory::create();
+        $app->setBasePath(BasePath::get());
         $app->addBodyParsingMiddleware();
 
         $app->get('/healthz', function (Request $request, Response $response) {

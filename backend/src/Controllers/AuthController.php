@@ -7,6 +7,7 @@ namespace CircuitMap\Controllers;
 use CircuitMap\Models\AuditLogRepository;
 use CircuitMap\Services\Auth\AuthService;
 use CircuitMap\Services\Auth\CsrfService;
+use CircuitMap\Support\BasePath;
 use CircuitMap\Support\ClientIp;
 use CircuitMap\Support\View;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -25,7 +26,7 @@ final class AuthController
     public function showLogin(Request $request, Response $response): Response
     {
         if ($this->auth->isAuthenticated()) {
-            return $response->withHeader('Location', '/')->withStatus(302);
+            return $response->withHeader('Location', BasePath::url('/'))->withStatus(302);
         }
 
         $html = View::render('layout', [
@@ -69,7 +70,7 @@ final class AuthController
 
         $this->auditLog->log((int) $user['id'], 'login_success', null, null, $ip);
 
-        return (new SlimResponse())->withHeader('Location', '/')->withStatus(302);
+        return (new SlimResponse())->withHeader('Location', BasePath::url('/'))->withStatus(302);
     }
 
     public function logout(Request $request, Response $response): Response
@@ -81,6 +82,6 @@ final class AuthController
             $this->auditLog->log((int) $user['id'], 'logout', null, null, ClientIp::from($request));
         }
 
-        return $response->withHeader('Location', '/login')->withStatus(302);
+        return $response->withHeader('Location', BasePath::url('/login'))->withStatus(302);
     }
 }

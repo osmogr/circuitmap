@@ -7,6 +7,7 @@ namespace CircuitMap\Controllers;
 use CircuitMap\Models\AuditLogRepository;
 use CircuitMap\Models\UserRepository;
 use CircuitMap\Services\Auth\CsrfService;
+use CircuitMap\Support\BasePath;
 use CircuitMap\Support\ClientIp;
 use CircuitMap\Support\Response as ResponseHelper;
 use CircuitMap\Support\View;
@@ -68,7 +69,7 @@ final class AdminController
             ClientIp::from($request)
         );
 
-        return (new \Slim\Psr7\Response())->withHeader('Location', '/admin/users')->withStatus(302);
+        return (new \Slim\Psr7\Response())->withHeader('Location', BasePath::url('/admin/users'))->withStatus(302);
     }
 
     /**
@@ -102,7 +103,7 @@ final class AdminController
             ClientIp::from($request)
         );
 
-        return (new \Slim\Psr7\Response())->withHeader('Location', '/admin/users')->withStatus(302);
+        return (new \Slim\Psr7\Response())->withHeader('Location', BasePath::url('/admin/users'))->withStatus(302);
     }
 
     /**
@@ -132,7 +133,7 @@ final class AdminController
             ClientIp::from($request)
         );
 
-        return (new \Slim\Psr7\Response())->withHeader('Location', '/admin/users')->withStatus(302);
+        return (new \Slim\Psr7\Response())->withHeader('Location', BasePath::url('/admin/users'))->withStatus(302);
     }
 
     public function showAuditLog(Request $request, Response $response): Response

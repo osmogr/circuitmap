@@ -58,6 +58,7 @@ container start (`docker/app/entrypoint.sh`), and are idempotent (a
 | `COOKIE_SECURE` | `true` | Marks the session cookie `Secure` (HTTPS only). Set `false` only for plain-HTTP local testing. |
 | `INITIAL_ADMIN_USERNAME` / `INITIAL_ADMIN_PASSWORD` | (required) | Bootstrap admin account, created once if `users` is empty. |
 | `MAX_UPLOAD_BYTES` | `10485760` (10 MB) | Application-level upload size cap, in addition to nginx/php.ini limits baked into the image. |
+| `BASE_PATH` | (empty, serves from `/`) | Mount the app under a sub-path, e.g. `/circuitmap`, instead of the domain root. Must start with `/` and have no trailing slash. |
 
 The app is designed to sit behind an existing reverse proxy (nginx/Caddy)
 that terminates TLS; it does not terminate TLS itself. It trusts
@@ -65,6 +66,11 @@ that terminates TLS; it does not terminate TLS itself. It trusts
 proxy in front of it is trusted infrastructure you control - do not expose
 the app container's port directly to an untrusted network without a proxy
 in front of it.
+
+If you set `BASE_PATH`, the proxy must forward the full path under that
+prefix through to this container unchanged (no strip-prefix rewrite) -
+e.g. a request to `https://host/circuitmap/login` should reach this
+container as `/circuitmap/login`, not `/login`.
 
 ## Authentication and roles
 

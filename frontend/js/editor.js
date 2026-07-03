@@ -65,7 +65,7 @@
     }
 
     function loadExisting() {
-        fetch('/api/circuits/' + encodeURIComponent(uuid) + '/geojson')
+        fetch(window.CircuitMapBasePath + '/api/circuits/' + encodeURIComponent(uuid) + '/geojson')
             .then(function (res) { return res.json(); })
             .then(function (geojson) {
                 var layer = L.geoJSON(geojson, {
@@ -129,7 +129,7 @@
             geojson: collectFeatureCollection()
         };
 
-        fetch('/circuits/' + encodeURIComponent(uuid), {
+        fetch(window.CircuitMapBasePath + '/circuits/' + encodeURIComponent(uuid), {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -155,7 +155,7 @@
     }
 
     function loadVersions() {
-        fetch('/circuits/' + encodeURIComponent(uuid) + '/versions')
+        fetch(window.CircuitMapBasePath + '/circuits/' + encodeURIComponent(uuid) + '/versions')
             .then(function (res) { return res.json(); })
             .then(function (data) {
                 var list = document.getElementById('version-list');
@@ -171,7 +171,7 @@
                         if (!confirm('Revert to version ' + v.version_number + '?')) {
                             return;
                         }
-                        fetch('/circuits/' + encodeURIComponent(uuid) + '/revert/' + v.version_number, {
+                        fetch(window.CircuitMapBasePath + '/circuits/' + encodeURIComponent(uuid) + '/revert/' + v.version_number, {
                             method: 'POST',
                             headers: { 'X-CSRF-Token': window.CircuitMapCsrf.token() }
                         }).then(function () {
@@ -189,7 +189,7 @@
         var statusEl = document.getElementById('edit-status');
         var select = document.getElementById('edit-status-select');
 
-        fetch('/circuits/' + encodeURIComponent(uuid) + '/status', {
+        fetch(window.CircuitMapBasePath + '/circuits/' + encodeURIComponent(uuid) + '/status', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -217,12 +217,12 @@
         if (!confirm('Delete this circuit? This cannot be undone from the UI.')) {
             return;
         }
-        fetch('/circuits/' + encodeURIComponent(uuid), {
+        fetch(window.CircuitMapBasePath + '/circuits/' + encodeURIComponent(uuid), {
             method: 'DELETE',
             headers: { 'X-CSRF-Token': window.CircuitMapCsrf.token() }
         }).then(function (res) {
             if (res.ok) {
-                window.location.href = '/';
+                window.location.href = window.CircuitMapBasePath + '/';
             } else {
                 document.getElementById('edit-status').textContent = 'Delete failed.';
             }

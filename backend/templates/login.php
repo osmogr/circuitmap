@@ -2,6 +2,7 @@
 /** @var string $csrfToken */
 /** @var string|null $error */
 
+use CircuitMap\Support\BasePath;
 use CircuitMap\Support\View;
 ?>
 <div class="login-page">
@@ -9,7 +10,7 @@ use CircuitMap\Support\View;
     <?php if (!empty($error)): ?>
         <p class="error"><?= View::escape($error) ?></p>
     <?php endif; ?>
-    <form method="post" action="/login">
+    <form method="post" action="<?= BasePath::url('/login') ?>">
         <input type="hidden" name="csrf_token" value="<?= View::escape($csrfToken) ?>">
         <label>
             Username

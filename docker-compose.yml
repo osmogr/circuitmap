@@ -21,11 +21,12 @@ services:
       PROXY_AUTH_ENABLED: "${PROXY_AUTH_ENABLED:-false}"
       PROXY_AUTH_HEADER: "${PROXY_AUTH_HEADER:-REMOTE_USER}"
       PROXY_AUTH_DEFAULT_ROLE: "${PROXY_AUTH_DEFAULT_ROLE:-editor}"
+      BASE_PATH: "${BASE_PATH:-}"
     volumes:
       - kml-data:/var/lib/circuitmap/kml
       - db-data:/var/lib/circuitmap/db
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://127.0.0.1:8080/healthz"]
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:8080${BASE_PATH:-}/healthz || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3

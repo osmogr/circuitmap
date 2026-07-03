@@ -3,18 +3,19 @@
 /** @var array<int, array<string, mixed>> $providers */
 /** @var string|null $error */
 
+use CircuitMap\Support\BasePath;
 use CircuitMap\Support\View;
 ?>
 <div class="admin-page">
     <h1>Manage circuit providers</h1>
-    <p><a href="/admin/users">Manage users</a></p>
+    <p><a href="<?= BasePath::url('/admin/users') ?>">Manage users</a></p>
     <?php if (!empty($error)): ?>
         <p class="error"><?= View::escape($error) ?></p>
     <?php endif; ?>
 
     <?php foreach ($providers as $provider): ?>
         <form id="provider-form-<?= (int) $provider['id'] ?>" method="post"
-              action="/admin/providers/<?= (int) $provider['id'] ?>">
+              action="<?= BasePath::url('/admin/providers/' . (int) $provider['id']) ?>">
             <input type="hidden" name="csrf_token" value="<?= View::escape($csrfToken) ?>">
         </form>
     <?php endforeach; ?>
@@ -53,7 +54,7 @@ use CircuitMap\Support\View;
                     <td><?= $provider['is_active'] ? 'Yes' : 'No' ?></td>
                     <td>
                         <button type="submit" form="<?= $formId ?>">Save</button>
-                        <form method="post" action="/admin/providers/<?= (int) $provider['id'] ?>/active" class="inline-form">
+                        <form method="post" action="<?= BasePath::url('/admin/providers/' . (int) $provider['id'] . '/active') ?>" class="inline-form">
                             <input type="hidden" name="csrf_token" value="<?= View::escape($csrfToken) ?>">
                             <input type="hidden" name="active" value="<?= $provider['is_active'] ? '0' : '1' ?>">
                             <button type="submit"><?= $provider['is_active'] ? 'Deactivate' : 'Activate' ?></button>
@@ -65,7 +66,7 @@ use CircuitMap\Support\View;
     </table>
 
     <h2>Add provider</h2>
-    <form method="post" action="/admin/providers" class="new-provider-form">
+    <form method="post" action="<?= BasePath::url('/admin/providers') ?>" class="new-provider-form">
         <input type="hidden" name="csrf_token" value="<?= View::escape($csrfToken) ?>">
         <label>
             Provider Name

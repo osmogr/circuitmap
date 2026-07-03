@@ -4,14 +4,15 @@
 /** @var array<int, array<string, mixed>> $providers */
 /** @var array<string, mixed>|null $currentUser */
 
+use CircuitMap\Support\BasePath;
 use CircuitMap\Support\View;
 ?>
-<link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="/assets/vendor/geoman/leaflet-geoman.css">
+<link rel="stylesheet" href="<?= BasePath::url('/assets/vendor/leaflet/leaflet.css') ?>">
+<link rel="stylesheet" href="<?= BasePath::url('/assets/vendor/geoman/leaflet-geoman.css') ?>">
 <div class="edit-page" data-circuit-uuid="<?= View::escape($circuit['uuid']) ?>">
     <aside class="edit-sidebar">
         <h1>Edit circuit</h1>
-        <p><a href="/">Back to map</a></p>
+        <p><a href="<?= BasePath::url('/') ?>">Back to map</a></p>
         <label>
             Name
             <input type="text" id="edit-name" value="<?= View::escape($circuit['name']) ?>" maxlength="200">
@@ -36,7 +37,7 @@ use CircuitMap\Support\View;
             </select>
         </label>
         <?php if (($currentUser['role'] ?? null) === 'admin'): ?>
-            <p class="hint"><a href="/admin/providers">Manage circuit providers</a></p>
+            <p class="hint"><a href="<?= BasePath::url('/admin/providers') ?>">Manage circuit providers</a></p>
         <?php endif; ?>
         <label>
             Circuit ID
@@ -78,7 +79,8 @@ use CircuitMap\Support\View;
     </aside>
     <div id="map"></div>
 </div>
-<script src="/assets/vendor/leaflet/leaflet.js"></script>
-<script src="/assets/vendor/geoman/leaflet-geoman.js"></script>
-<script src="/assets/js/csrf.js"></script>
-<script src="/assets/js/editor.js"></script>
+<script src="<?= BasePath::url('/assets/js/base-path.js') ?>"></script>
+<script src="<?= BasePath::url('/assets/vendor/leaflet/leaflet.js') ?>"></script>
+<script src="<?= BasePath::url('/assets/vendor/geoman/leaflet-geoman.js') ?>"></script>
+<script src="<?= BasePath::url('/assets/js/csrf.js') ?>"></script>
+<script src="<?= BasePath::url('/assets/js/editor.js') ?>"></script>

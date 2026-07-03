@@ -1,15 +1,16 @@
 <?php
 /** @var array<string, mixed>|null $currentUser */
 
+use CircuitMap\Support\BasePath;
 use CircuitMap\Support\View;
 ?>
-<link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="<?= BasePath::url('/assets/vendor/leaflet/leaflet.css') ?>">
 <div class="map-page">
     <aside class="circuit-list">
         <h2>Circuits</h2>
         <?php if ($currentUser !== null): ?>
-            <p><a href="/upload">Upload a circuit</a></p>
-            <p><a href="/circuits/new">Create new circuit</a></p>
+            <p><a href="<?= BasePath::url('/upload') ?>">Upload a circuit</a></p>
+            <p><a href="<?= BasePath::url('/circuits/new') ?>">Create new circuit</a></p>
         <?php endif; ?>
         <ul id="circuit-toggle-list"></ul>
     </aside>
@@ -22,5 +23,6 @@ use CircuitMap\Support\View;
     $currentUser === null ? null : ['id' => $currentUser['id'], 'role' => $currentUser['role']],
     JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP
 ) ?></script>
-<script src="/assets/vendor/leaflet/leaflet.js"></script>
-<script src="/assets/js/map.js"></script>
+<script src="<?= BasePath::url('/assets/js/base-path.js') ?>"></script>
+<script src="<?= BasePath::url('/assets/vendor/leaflet/leaflet.js') ?>"></script>
+<script src="<?= BasePath::url('/assets/js/map.js') ?>"></script>

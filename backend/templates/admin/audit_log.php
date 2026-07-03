@@ -1,11 +1,12 @@
 <?php
 /** @var array<int, array<string, mixed>> $entries */
 
+use CircuitMap\Support\BasePath;
 use CircuitMap\Support\View;
 ?>
 <div class="admin-page">
     <h1>Audit log</h1>
-    <p><a href="/admin/users">Back to users</a></p>
+    <p><a href="<?= BasePath::url('/admin/users') ?>">Back to users</a></p>
     <table>
         <thead>
             <tr>

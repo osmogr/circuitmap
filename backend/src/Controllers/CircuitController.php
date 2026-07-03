@@ -16,6 +16,7 @@ use CircuitMap\Services\Kml\KmlSanitizer;
 use CircuitMap\Services\Kml\KmlValidator;
 use CircuitMap\Services\Kml\KmzExtractor;
 use CircuitMap\Services\Storage\FileStorageService;
+use CircuitMap\Support\BasePath;
 use CircuitMap\Support\CircuitAuthorization;
 use CircuitMap\Support\ClientIp;
 use CircuitMap\Support\Response as ResponseHelper;
@@ -149,7 +150,7 @@ final class CircuitController
             ClientIp::from($request)
         );
 
-        return (new SlimResponse())->withHeader('Location', "/circuits/{$uuid}/edit")->withStatus(302);
+        return (new SlimResponse())->withHeader('Location', BasePath::url("/circuits/{$uuid}/edit"))->withStatus(302);
     }
 
     public function upload(Request $request, Response $response): Response
@@ -218,7 +219,7 @@ final class CircuitController
             ClientIp::from($request)
         );
 
-        return (new SlimResponse())->withHeader('Location', '/')->withStatus(302);
+        return (new SlimResponse())->withHeader('Location', BasePath::url('/'))->withStatus(302);
     }
 
     public function listJson(Request $request, Response $response): Response

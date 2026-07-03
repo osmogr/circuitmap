@@ -12,6 +12,7 @@ RUN apt-get update \
         libsqlite3-dev \
         unzip \
         curl \
+        gettext-base \
     && docker-php-ext-install -j"$(nproc)" pdo_sqlite zip \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -41,7 +42,7 @@ COPY backend/ ./
 COPY migrations/ /var/www/migrations/
 COPY frontend/ /var/www/frontend/
 
-COPY docker/app/nginx.conf /etc/nginx/sites-enabled/default
+COPY docker/app/nginx.conf.template /etc/nginx/templates/nginx.conf.template
 COPY docker/app/php.ini /usr/local/etc/php/conf.d/99-circuitmap.ini
 RUN rm -f /usr/local/etc/php-fpm.d/zz-docker.conf /usr/local/etc/php-fpm.d/www.conf.default
 COPY docker/app/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf

@@ -4,6 +4,7 @@
 /** @var array<int, array<string, mixed>> $providers */
 /** @var array<string, mixed>|null $currentUser */
 
+use CircuitMap\Support\BasePath;
 use CircuitMap\Support\View;
 ?>
 <div class="upload-page">
@@ -11,7 +12,7 @@ use CircuitMap\Support\View;
     <?php if (!empty($error)): ?>
         <p class="error"><?= View::escape($error) ?></p>
     <?php endif; ?>
-    <form method="post" action="/upload" enctype="multipart/form-data">
+    <form method="post" action="<?= BasePath::url('/upload') ?>" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="<?= View::escape($csrfToken) ?>">
         <label>
             Name
@@ -35,7 +36,7 @@ use CircuitMap\Support\View;
             </select>
         </label>
         <?php if (($currentUser['role'] ?? null) === 'admin'): ?>
-            <p class="hint"><a href="/admin/providers">Manage circuit providers</a></p>
+            <p class="hint"><a href="<?= BasePath::url('/admin/providers') ?>">Manage circuit providers</a></p>
         <?php endif; ?>
         <label>
             Circuit ID

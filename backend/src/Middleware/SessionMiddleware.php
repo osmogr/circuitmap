@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CircuitMap\Middleware;
 
 use CircuitMap\Services\Auth\PdoSessionHandler;
+use CircuitMap\Support\BasePath;
 use CircuitMap\Support\Database;
 use CircuitMap\Support\Env;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -20,7 +21,7 @@ final class SessionMiddleware implements MiddlewareInterface
             session_set_save_handler(new PdoSessionHandler(Database::connection()), true);
             session_set_cookie_params([
                 'lifetime' => 0,
-                'path' => '/',
+                'path' => BasePath::get() === '' ? '/' : BasePath::get(),
                 'httponly' => true,
                 'samesite' => 'Lax',
                 'secure' => Env::getBool('COOKIE_SECURE', true),

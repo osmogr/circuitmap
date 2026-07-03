@@ -48,7 +48,7 @@
     function loadCircuitGeometry(circuit, checkbox) {
         var color = circuit.statusColor || '#6b7280';
 
-        fetch('/api/circuits/' + encodeURIComponent(circuit.uuid) + '/geojson')
+        return fetch(window.CircuitMapBasePath + '/api/circuits/' + encodeURIComponent(circuit.uuid) + '/geojson')
             .then(function (res) {
                 if (!res.ok) {
                     throw new Error('Failed to load geometry');
@@ -84,17 +84,31 @@
         if (checkbox.checked) {
             if (layersByUuid[circuit.uuid]) {
                 layersByUuid[circuit.uuid].addTo(map);
-            } else {
-                loadCircuitGeometry(circuit, checkbox);
+                return Promise.resolve();
             }
-        } else if (layersByUuid[circuit.uuid]) {
+            return loadCircuitGeometry(circuit, checkbox);
+        }
+        if (layersByUuid[circuit.uuid]) {
             map.removeLayer(layersByUuid[circuit.uuid]);
+        }
+        return Promise.resolve();
+    }
+
+    function zoomToFitLoadedCircuits() {
+        var bounds = L.latLngBounds([]);
+        Object.keys(layersByUuid).forEach(function (uuid) {
+            bounds.extend(layersByUuid[uuid].getBounds());
+        });
+        if (bounds.isValid()) {
+            map.fitBounds(bounds, { padding: [20, 20], maxZoom: 16 });
         }
     }
 
     function renderCircuitList(circuits) {
         var list = document.getElementById('circuit-toggle-list');
         list.innerHTML = '';
+
+        var initialLoads = [];
 
         circuits.forEach(function (circuit) {
             var item = document.createElement('li');
@@ -118,7 +132,7 @@
 
             if (canEdit(circuit)) {
                 var editLink = document.createElement('a');
-                editLink.href = '/circuits/' + encodeURIComponent(circuit.uuid) + '/edit';
+                editLink.href = window.CircuitMapBasePath + '/circuits/' + encodeURIComponent(circuit.uuid) + '/edit';
                 editLink.textContent = 'edit';
                 editLink.className = 'circuit-edit-link';
                 item.appendChild(document.createTextNode(' '));
@@ -127,11 +141,13 @@
 
             list.appendChild(item);
 
-            toggleCircuit(circuit, checkbox);
+            initialLoads.push(toggleCircuit(circuit, checkbox));
         });
+
+        Promise.allSettled(initialLoads).then(zoomToFitLoadedCircuits);
     }
 
-    fetch('/api/circuits')
+    fetch(window.CircuitMapBasePath + '/api/circuits')
         .then(function (res) { return res.json(); })
         .then(function (data) { renderCircuitList(data.circuits || []); });
 })();

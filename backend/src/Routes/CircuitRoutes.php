@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CircuitMap\Routes;
 
 use CircuitMap\Controllers\CircuitController;
+use CircuitMap\Controllers\LocationController;
 use CircuitMap\Middleware\AuthGateMiddleware;
 use CircuitMap\Middleware\CsrfMiddleware;
 use CircuitMap\Middleware\RateLimitMiddleware;
@@ -25,6 +26,8 @@ final class CircuitRoutes
         $editController = $services['editController'];
         /** @var \CircuitMap\Controllers\StatusController $statusController */
         $statusController = $services['statusController'];
+        /** @var LocationController $locationController */
+        $locationController = $services['locationController'];
         /** @var AuthGateMiddleware $authGate */
         $authGate = $services['authGateMiddleware'];
         /** @var CsrfMiddleware $csrfMiddleware */
@@ -48,10 +51,12 @@ final class CircuitRoutes
 
         $apiCircuits = $app->get('/api/circuits', [$controller, 'listJson']);
         $apiGeoJson = $app->get('/api/circuits/{uuid}/geojson', [$controller, 'geoJson']);
+        $apiLocations = $app->get('/api/locations', [$locationController, 'listJson']);
 
         if (Env::getBool('REQUIRE_AUTH_FOR_VIEW', false)) {
             $apiCircuits->add($authGate);
             $apiGeoJson->add($authGate);
+            $apiLocations->add($authGate);
         }
 
         $app->get('/circuits/{uuid}/edit', [$editController, 'showEditForm'])->add($authGate);

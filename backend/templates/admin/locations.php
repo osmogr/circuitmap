@@ -1,6 +1,7 @@
 <?php
 /** @var string $csrfToken */
 /** @var array<int, array<string, mixed>> $locations */
+/** @var array<string, array{label: string, symbol: string}> $iconOptions */
 /** @var string|null $error */
 
 use CircuitMap\Support\BasePath;
@@ -12,6 +13,7 @@ use CircuitMap\Support\View;
     <?php if (!empty($error)): ?>
         <p class="error"><?= View::escape($error) ?></p>
     <?php endif; ?>
+    <p class="hint">Set latitude and longitude (together) to show a location on the map, with the icon below.</p>
 
     <?php foreach ($locations as $location): ?>
         <form id="location-form-<?= (int) $location['id'] ?>" method="post"
@@ -26,6 +28,9 @@ use CircuitMap\Support\View;
                 <th>Name</th>
                 <th>Address</th>
                 <th>Notes</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+                <th>Icon</th>
                 <th>Active</th>
                 <th>Actions</th>
             </tr>
@@ -45,6 +50,24 @@ use CircuitMap\Support\View;
                     <td>
                         <input type="text" form="<?= $formId ?>" name="notes"
                                value="<?= View::escape($location['notes'] ?? '') ?>" maxlength="500">
+                    </td>
+                    <td>
+                        <input type="text" form="<?= $formId ?>" name="latitude" inputmode="decimal"
+                               value="<?= View::escape((string) ($location['latitude'] ?? '')) ?>" maxlength="20">
+                    </td>
+                    <td>
+                        <input type="text" form="<?= $formId ?>" name="longitude" inputmode="decimal"
+                               value="<?= View::escape((string) ($location['longitude'] ?? '')) ?>" maxlength="20">
+                    </td>
+                    <td>
+                        <select form="<?= $formId ?>" name="icon">
+                            <?php foreach ($iconOptions as $key => $option): ?>
+                                <option value="<?= View::escape($key) ?>"
+                                    <?= ($location['icon'] ?? 'generic') === $key ? 'selected' : '' ?>>
+                                    <?= View::escape($option['symbol'] . ' ' . $option['label']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </td>
                     <td><?= $location['is_active'] ? 'Yes' : 'No' ?></td>
                     <td>
@@ -74,6 +97,24 @@ use CircuitMap\Support\View;
         <label>
             Notes
             <input type="text" name="notes" maxlength="500">
+        </label>
+        <label>
+            Latitude
+            <input type="text" name="latitude" inputmode="decimal" maxlength="20">
+        </label>
+        <label>
+            Longitude
+            <input type="text" name="longitude" inputmode="decimal" maxlength="20">
+        </label>
+        <label>
+            Icon
+            <select name="icon">
+                <?php foreach ($iconOptions as $key => $option): ?>
+                    <option value="<?= View::escape($key) ?>">
+                        <?= View::escape($option['symbol'] . ' ' . $option['label']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
         </label>
         <button type="submit">Create location</button>
     </form>

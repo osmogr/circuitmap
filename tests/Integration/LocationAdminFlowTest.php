@@ -67,6 +67,73 @@ final class LocationAdminFlowTest extends DatabaseTestCase
         $this->assertSame(1, (int) $locations[0]['is_active']);
     }
 
+    public function testCreateLocationPersistsMapFields(): void
+    {
+        $request = $this->requestWithBody('POST', '/admin/locations', [
+            'name' => 'Main Street DC',
+            'address' => '123 Main St, Springfield',
+            'latitude' => '39.781721',
+            'longitude' => '-89.650148',
+            'icon' => 'data-center',
+        ]);
+
+        $response = $this->controller->createLocation($request, (new ResponseFactory())->createResponse());
+
+        $this->assertSame(302, $response->getStatusCode());
+
+        $location = $this->locations->listAll()[0];
+        $this->assertEqualsWithDelta(39.781721, (float) $location['latitude'], 0.0001);
+        $this->assertEqualsWithDelta(-89.650148, (float) $location['longitude'], 0.0001);
+        $this->assertSame('data-center', $location['icon']);
+    }
+
+    public function testCreateLocationRejectsPartialCoordinates(): void
+    {
+        $request = $this->requestWithBody('POST', '/admin/locations', [
+            'name' => 'Main Street DC',
+            'latitude' => '39.781721',
+        ]);
+
+        $response = $this->controller->createLocation($request, (new ResponseFactory())->createResponse());
+
+        $this->assertSame(422, $response->getStatusCode());
+        $this->assertCount(0, $this->locations->listAll());
+    }
+
+    public function testCreateLocationRejectsUnknownIcon(): void
+    {
+        $request = $this->requestWithBody('POST', '/admin/locations', [
+            'name' => 'Main Street DC',
+            'latitude' => '39.781721',
+            'longitude' => '-89.650148',
+            'icon' => 'not-a-real-icon',
+        ]);
+
+        $response = $this->controller->createLocation($request, (new ResponseFactory())->createResponse());
+
+        $this->assertSame(422, $response->getStatusCode());
+        $this->assertCount(0, $this->locations->listAll());
+    }
+
+    public function testListJsonOnlyIncludesActiveLocationsWithCoordinates(): void
+    {
+        $this->locations->insert('No address', null, null);
+        $this->locations->insert('Geolocated', '123 Main St', null, 39.78, -89.65, 'office');
+        $inactiveId = $this->locations->insert('Inactive but geolocated', '456 Elm St', null, 40.0, -90.0, 'office');
+        $this->locations->setActive($inactiveId, false);
+
+        $response = $this->controller->listJson(
+            (new ServerRequestFactory())->createServerRequest('GET', '/api/locations'),
+            (new ResponseFactory())->createResponse()
+        );
+
+        $body = json_decode((string) $response->getBody(), true);
+        $this->assertCount(1, $body['locations']);
+        $this->assertSame('Geolocated', $body['locations'][0]['name']);
+        $this->assertSame('🏢', $body['locations'][0]['iconSymbol']);
+        $this->assertIsFloat($body['locations'][0]['latitude']);
+    }
+
     public function testDuplicateNameIsRejected(): void
     {
         $this->locations->insert('Main Street DC', null, null);

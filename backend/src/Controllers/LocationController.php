@@ -9,6 +9,8 @@ use CircuitMap\Models\LocationRepository;
 use CircuitMap\Services\Auth\CsrfService;
 use CircuitMap\Support\BasePath;
 use CircuitMap\Support\ClientIp;
+use CircuitMap\Support\LocationIcon;
+use CircuitMap\Support\Response as ResponseHelper;
 use CircuitMap\Support\View;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -32,11 +34,31 @@ final class LocationController
             'content' => View::render('admin/locations', [
                 'csrfToken' => $this->csrf->getToken(),
                 'locations' => $this->locations->listAll(),
+                'iconOptions' => LocationIcon::options(),
                 'error' => null,
             ]),
         ]);
         $response->getBody()->write($html);
         return $response->withHeader('Content-Type', 'text/html; charset=utf-8');
+    }
+
+    /**
+     * Locations with a valid address (geolocated + active), for the map to
+     * plot a marker per site.
+     */
+    public function listJson(Request $request, Response $response): Response
+    {
+        $locations = array_map(
+            static function (array $location): array {
+                $location['latitude'] = (float) $location['latitude'];
+                $location['longitude'] = (float) $location['longitude'];
+                $location['iconSymbol'] = LocationIcon::symbolFor($location['icon'] ?? null);
+                return $location;
+            },
+            $this->locations->listMappable()
+        );
+
+        return ResponseHelper::json(['locations' => $locations]);
     }
 
     public function createLocation(Request $request, Response $response): Response
@@ -46,6 +68,7 @@ final class LocationController
         $name = is_string($body['name'] ?? null) ? trim($body['name']) : '';
         $address = $this->nullableTrim($body['address'] ?? null);
         $notes = $this->nullableTrim($body['notes'] ?? null);
+        [$latitude, $longitude, $icon, $coordError] = $this->parseMapFields($body);
 
         if ($name === '') {
             return $this->renderLocationsPage($response, $currentUser, 'A location name is required.', 422);
@@ -53,8 +76,11 @@ final class LocationController
         if ($this->locations->findByName($name) !== null) {
             return $this->renderLocationsPage($response, $currentUser, 'That location name already exists.', 422);
         }
+        if ($coordError !== null) {
+            return $this->renderLocationsPage($response, $currentUser, $coordError, 422);
+        }
 
-        $newLocationId = $this->locations->insert($name, $address, $notes);
+        $newLocationId = $this->locations->insert($name, $address, $notes, $latitude, $longitude, $icon);
         $this->auditLog->log(
             (int) $currentUser['id'],
             'location_create',
@@ -77,6 +103,7 @@ final class LocationController
         $name = is_string($body['name'] ?? null) ? trim($body['name']) : '';
         $address = $this->nullableTrim($body['address'] ?? null);
         $notes = $this->nullableTrim($body['notes'] ?? null);
+        [$latitude, $longitude, $icon, $coordError] = $this->parseMapFields($body);
 
         if ($this->locations->findById($targetId) === null) {
             return $this->renderLocationsPage($response, $currentUser, 'Location not found.', 404);
@@ -88,8 +115,11 @@ final class LocationController
         if ($existing !== null && (int) $existing['id'] !== $targetId) {
             return $this->renderLocationsPage($response, $currentUser, 'That location name already exists.', 422);
         }
+        if ($coordError !== null) {
+            return $this->renderLocationsPage($response, $currentUser, $coordError, 422);
+        }
 
-        $this->locations->update($targetId, $name, $address, $notes);
+        $this->locations->update($targetId, $name, $address, $notes, $latitude, $longitude, $icon);
         $this->auditLog->log(
             (int) $currentUser['id'],
             'location_update',
@@ -140,6 +170,42 @@ final class LocationController
     }
 
     /**
+     * Parses and validates the latitude/longitude/icon fields shared by
+     * create and update. Both coordinates must be present together (or
+     * both absent) for a location to be "map-ready".
+     *
+     * @param array<string, mixed> $body
+     * @return array{0: ?float, 1: ?float, 2: ?string, 3: ?string}
+     */
+    private function parseMapFields(array $body): array
+    {
+        $latitudeRaw = $this->nullableTrim($body['latitude'] ?? null);
+        $longitudeRaw = $this->nullableTrim($body['longitude'] ?? null);
+        $icon = $this->nullableTrim($body['icon'] ?? null);
+
+        if ($latitudeRaw === null && $longitudeRaw === null) {
+            return [null, null, null, null];
+        }
+        if ($latitudeRaw === null || $longitudeRaw === null) {
+            return [null, null, null, 'Latitude and longitude must be set together.'];
+        }
+        if (!is_numeric($latitudeRaw) || !is_numeric($longitudeRaw)) {
+            return [null, null, null, 'Latitude and longitude must be numbers.'];
+        }
+
+        $latitude = (float) $latitudeRaw;
+        $longitude = (float) $longitudeRaw;
+        if ($latitude < -90.0 || $latitude > 90.0 || $longitude < -180.0 || $longitude > 180.0) {
+            return [null, null, null, 'Latitude must be between -90 and 90, longitude between -180 and 180.'];
+        }
+        if ($icon !== null && !LocationIcon::isValid($icon)) {
+            return [null, null, null, 'Unknown icon selection.'];
+        }
+
+        return [$latitude, $longitude, $icon ?? 'generic', null];
+    }
+
+    /**
      * @param mixed $currentUser
      */
     private function renderLocationsPage(Response $response, $currentUser, string $error, int $status): Response
@@ -151,6 +217,7 @@ final class LocationController
             'content' => View::render('admin/locations', [
                 'csrfToken' => $this->csrf->getToken(),
                 'locations' => $this->locations->listAll(),
+                'iconOptions' => LocationIcon::options(),
                 'error' => $error,
             ]),
         ]);

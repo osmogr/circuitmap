@@ -179,7 +179,51 @@
         Promise.allSettled(initialLoads).then(zoomToFitLoadedCircuits);
     }
 
+    function locationPopupHtml(location) {
+        var box = document.createElement('div');
+        var title = document.createElement('strong');
+        title.textContent = location.name;
+        box.appendChild(title);
+
+        var meta = document.createElement('div');
+        meta.className = 'circuit-popup-meta';
+        [
+            metaRow('Address', location.address),
+            metaRow('Notes', location.notes)
+        ].forEach(function (row) {
+            if (row) {
+                meta.appendChild(row);
+            }
+        });
+        box.appendChild(meta);
+
+        return box;
+    }
+
+    function renderLocationMarkers(locations) {
+        locations.forEach(function (location) {
+            if (typeof location.latitude !== 'number' || typeof location.longitude !== 'number') {
+                return;
+            }
+            var icon = L.divIcon({
+                className: 'location-marker',
+                html: '<span class="location-marker-symbol">' + (location.iconSymbol || '📍') + '</span>',
+                iconSize: [28, 28],
+                iconAnchor: [14, 14]
+            });
+            L.marker([location.latitude, location.longitude], { icon: icon })
+                .bindPopup(function () {
+                    return locationPopupHtml(location);
+                })
+                .addTo(map);
+        });
+    }
+
     fetch(window.CircuitMapBasePath + '/api/circuits')
         .then(function (res) { return res.json(); })
         .then(function (data) { renderCircuitList(data.circuits || []); });
+
+    fetch(window.CircuitMapBasePath + '/api/locations')
+        .then(function (res) { return res.json(); })
+        .then(function (data) { renderLocationMarkers(data.locations || []); });
 })();

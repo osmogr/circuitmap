@@ -99,7 +99,8 @@ main:has(.edit-page) {
     margin-top: 0.25rem;
 }
 
-.edit-sidebar .hint {
+.edit-sidebar .hint,
+.admin-page .hint {
     font-size: 0.85rem;
     color: #555;
 }
@@ -202,4 +203,16 @@ main:has(.edit-page) {
     border-top: 1px solid #ddd;
     font-size: 0.85rem;
     color: #444;
+}
+
+.location-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.location-marker-symbol {
+    font-size: 1.4rem;
+    line-height: 1;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5));
 }

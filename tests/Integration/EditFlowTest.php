@@ -50,6 +50,7 @@ final class EditFlowTest extends DatabaseTestCase
 
         $auth = new AuthService(new UserRepository($this->pdo));
         $this->controller = new EditController(
+            $this->pdo,
             $auth,
             new CsrfService(),
             $this->circuits,

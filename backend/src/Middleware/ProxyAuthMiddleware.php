@@ -12,8 +12,11 @@ use Psr\Http\Server\RequestHandlerInterface as RequestHandler;
 
 /**
  * Trusts a header set by an upstream reverse proxy (e.g. oauth2-proxy,
- * an SSO gateway) as proof of identity, the same way ClientIp trusts
- * X-Forwarded-For. This is ONLY safe when every request that reaches this
+ * an SSO gateway) as proof of identity. Note this is a stronger trust
+ * assumption than ClientIp's X-Forwarded-For handling: that header is
+ * appended-to, so only its proxy-supplied tail is trusted, whereas this
+ * identity header is trusted wholesale. This is ONLY safe when every request
+ * that reaches this
  * application has already passed through that proxy, and the proxy
  * strips/overwrites any client-supplied copy of the header before
  * forwarding. If this app is ever reachable directly (bypassing the

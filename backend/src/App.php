@@ -167,6 +167,7 @@ final class App
             'circuitProviderController' => new CircuitProviderController($circuitProviders, $auditLog, $csrf),
             'locationController' => new LocationController($locations, $auditLog, $csrf, $geocodingService),
             'editController' => new EditController(
+                $pdo,
                 $auth,
                 $csrf,
                 $circuits,

@@ -21,12 +21,14 @@ use CircuitMap\Support\CircuitAuthorization;
 use CircuitMap\Support\ClientIp;
 use CircuitMap\Support\Response as ResponseHelper;
 use CircuitMap\Support\View;
+use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 final class EditController
 {
     public function __construct(
+        private readonly PDO $pdo,
         private readonly AuthService $auth,
         private readonly CsrfService $csrf,
         private readonly CircuitRepository $circuits,
@@ -159,30 +161,53 @@ final class EditController
         $oldVersionNumber = (int) $circuit['current_version'];
         $newVersionNumber = $oldVersionNumber + 1;
 
+        // Snapshot the pre-edit content to versions/vN.kml before touching the
+        // database. This is a non-destructive copy (current.kml is untouched),
+        // so if the transaction below rolls back, the leftover snapshot has no
+        // DB row referencing it and is harmlessly re-created by the next edit.
         $this->storage->archiveCurrent($uuid, $oldVersionNumber);
-        $this->versions->insert(
-            (int) $circuit['id'],
-            $oldVersionNumber,
-            "circuits/{$uuid}/versions/v{$oldVersionNumber}.kml",
-            $circuit['name'],
-            $circuit['description'],
-            (int) $currentUser['id']
-        );
 
-        $this->storage->overwriteCurrent($uuid, $normalizedXml);
-        $this->circuits->updateAfterEdit(
-            (int) $circuit['id'],
-            $name,
-            $description,
-            $tags,
-            $newVersionNumber,
-            $providerId,
-            $providerCircuitId === '' ? null : $providerCircuitId,
-            $orderNumber === '' ? null : $orderNumber,
-            $redundant,
-            $aLocationId,
-            $zLocationId
-        );
+        try {
+            // Version row, circuit-row bump, and the destructive overwrite of
+            // current.kml are one unit of work: either all apply or none do.
+            // Two editors saving the same circuit both compute the same
+            // version_number and collide on the UNIQUE(circuit_id,
+            // version_number) constraint; the loser's transaction rolls back
+            // and it gets a clean 409 instead of a corrupted half-edit.
+            $this->inTransaction(function () use (
+                $circuit, $oldVersionNumber, $uuid, $name, $description, $tags,
+                $newVersionNumber, $providerId, $providerCircuitId, $orderNumber,
+                $redundant, $aLocationId, $zLocationId, $normalizedXml, $currentUser
+            ): void {
+                $this->versions->insert(
+                    (int) $circuit['id'],
+                    $oldVersionNumber,
+                    "circuits/{$uuid}/versions/v{$oldVersionNumber}.kml",
+                    $circuit['name'],
+                    $circuit['description'],
+                    (int) $currentUser['id']
+                );
+                $this->circuits->updateAfterEdit(
+                    (int) $circuit['id'],
+                    $name,
+                    $description,
+                    $tags,
+                    $newVersionNumber,
+                    $providerId,
+                    $providerCircuitId === '' ? null : $providerCircuitId,
+                    $orderNumber === '' ? null : $orderNumber,
+                    $redundant,
+                    $aLocationId,
+                    $zLocationId
+                );
+                $this->storage->overwriteCurrent($uuid, $normalizedXml);
+            });
+        } catch (\PDOException $e) {
+            return ResponseHelper::json(
+                ['error' => 'This circuit was modified by someone else; reload and try again.'],
+                409
+            );
+        }
 
         $this->auditLog->log(
             (int) $currentUser['id'],
@@ -244,19 +269,31 @@ final class EditController
         $newVersionNumber = $oldVersionNumber + 1;
 
         // Reverting also archives what it replaces, so a revert is itself
-        // non-destructive and can be undone.
+        // non-destructive and can be undone. The archive is a safe copy taken
+        // before the transaction; see update() for the ordering rationale.
         $this->storage->archiveCurrent($uuid, $oldVersionNumber);
-        $this->versions->insert(
-            (int) $circuit['id'],
-            $oldVersionNumber,
-            "circuits/{$uuid}/versions/v{$oldVersionNumber}.kml",
-            $circuit['name'],
-            $circuit['description'],
-            (int) $currentUser['id']
-        );
 
-        $this->storage->overwriteCurrent($uuid, $targetContent);
-        $this->circuits->updateAfterRevert((int) $circuit['id'], $newVersionNumber);
+        try {
+            $this->inTransaction(function () use (
+                $circuit, $oldVersionNumber, $uuid, $newVersionNumber, $targetContent, $currentUser
+            ): void {
+                $this->versions->insert(
+                    (int) $circuit['id'],
+                    $oldVersionNumber,
+                    "circuits/{$uuid}/versions/v{$oldVersionNumber}.kml",
+                    $circuit['name'],
+                    $circuit['description'],
+                    (int) $currentUser['id']
+                );
+                $this->circuits->updateAfterRevert((int) $circuit['id'], $newVersionNumber);
+                $this->storage->overwriteCurrent($uuid, $targetContent);
+            });
+        } catch (\PDOException $e) {
+            return ResponseHelper::json(
+                ['error' => 'This circuit was modified by someone else; reload and try again.'],
+                409
+            );
+        }
 
         $this->auditLog->log(
             (int) $currentUser['id'],
@@ -267,6 +304,26 @@ final class EditController
         );
 
         return ResponseHelper::json(['status' => 'ok', 'version' => $newVersionNumber]);
+    }
+
+    /**
+     * Runs $work inside a single database transaction, rolling back and
+     * re-throwing if it raises. Any filesystem writes performed inside $work
+     * are not themselves transactional; callers order them so that a rollback
+     * leaves only benign, self-healing artifacts (see update()).
+     */
+    private function inTransaction(callable $work): void
+    {
+        $this->pdo->beginTransaction();
+        try {
+            $work();
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
     }
 
     /**

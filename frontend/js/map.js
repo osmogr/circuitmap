@@ -58,6 +58,8 @@
             [
                 metaRow('Circuit', circuit.name),
                 metaRow('ID', circuit.uuid),
+                metaRow('A-Location', circuit.a_location_name),
+                metaRow('Z-Location', circuit.z_location_name),
                 metaRow('Provider', circuit.provider_name),
                 metaRow('Provider circuit ID', circuit.provider_circuit_id),
                 metaRow('Order number', circuit.order_number),

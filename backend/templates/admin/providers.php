@@ -8,7 +8,7 @@ use CircuitMap\Support\View;
 ?>
 <div class="admin-page">
     <h1>Manage circuit providers</h1>
-    <p><a href="<?= BasePath::url('/admin/users') ?>">Manage users</a></p>
+    <p><a href="<?= BasePath::url('/admin/users') ?>">Manage users</a> | <a href="<?= BasePath::url('/admin/locations') ?>">Manage locations</a></p>
     <?php if (!empty($error)): ?>
         <p class="error"><?= View::escape($error) ?></p>
     <?php endif; ?>

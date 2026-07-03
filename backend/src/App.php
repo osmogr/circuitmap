@@ -9,6 +9,7 @@ use CircuitMap\Controllers\AuthController;
 use CircuitMap\Controllers\CircuitController;
 use CircuitMap\Controllers\CircuitProviderController;
 use CircuitMap\Controllers\EditController;
+use CircuitMap\Controllers\LocationController;
 use CircuitMap\Controllers\StatusController;
 use CircuitMap\Middleware\AuthGateMiddleware;
 use CircuitMap\Middleware\CsrfMiddleware;
@@ -18,6 +19,7 @@ use CircuitMap\Models\AuditLogRepository;
 use CircuitMap\Models\CircuitProviderRepository;
 use CircuitMap\Models\CircuitRepository;
 use CircuitMap\Models\CircuitVersionRepository;
+use CircuitMap\Models\LocationRepository;
 use CircuitMap\Models\UserRepository;
 use CircuitMap\Routes\AdminRoutes;
 use CircuitMap\Routes\AuthRoutes;
@@ -103,6 +105,7 @@ final class App
         $circuits = new CircuitRepository($pdo);
         $circuitVersions = new CircuitVersionRepository($pdo);
         $circuitProviders = new CircuitProviderRepository($pdo);
+        $locations = new LocationRepository($pdo);
         $auditLog = new AuditLogRepository($pdo);
         $auth = new AuthService($users);
         $csrf = new CsrfService();
@@ -128,6 +131,7 @@ final class App
             'userRepo' => $users,
             'circuits' => $circuits,
             'circuitProviders' => $circuitProviders,
+            'locations' => $locations,
             'auditLog' => $auditLog,
             'auth' => $auth,
             'csrf' => $csrf,
@@ -141,6 +145,7 @@ final class App
                 $csrf,
                 $circuits,
                 $circuitProviders,
+                $locations,
                 $auditLog,
                 $storage,
                 $parser,
@@ -152,11 +157,13 @@ final class App
             'statusController' => new StatusController($circuits, $auditLog, $statusProvider),
             'adminController' => new AdminController($users, $auditLog, $csrf),
             'circuitProviderController' => new CircuitProviderController($circuitProviders, $auditLog, $csrf),
+            'locationController' => new LocationController($locations, $auditLog, $csrf),
             'editController' => new EditController(
                 $auth,
                 $csrf,
                 $circuits,
                 $circuitProviders,
+                $locations,
                 $circuitVersions,
                 $auditLog,
                 $storage,

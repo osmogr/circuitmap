@@ -6,6 +6,7 @@ namespace CircuitMap\Routes;
 
 use CircuitMap\Controllers\AdminController;
 use CircuitMap\Controllers\CircuitProviderController;
+use CircuitMap\Controllers\LocationController;
 use CircuitMap\Middleware\AuthGateMiddleware;
 use CircuitMap\Middleware\CsrfMiddleware;
 use CircuitMap\Middleware\RoleMiddleware;
@@ -22,6 +23,8 @@ final class AdminRoutes
         $controller = $services['adminController'];
         /** @var CircuitProviderController $providerController */
         $providerController = $services['circuitProviderController'];
+        /** @var LocationController $locationController */
+        $locationController = $services['locationController'];
         /** @var AuthGateMiddleware $authGate */
         $authGate = $services['authGateMiddleware'];
         /** @var CsrfMiddleware $csrfMiddleware */
@@ -51,6 +54,17 @@ final class AdminRoutes
             ->add($adminOnly)->add($authGate)->add($csrfMiddleware);
 
         $app->post('/admin/providers/{id}/active', [$providerController, 'setActive'])
+            ->add($adminOnly)->add($authGate)->add($csrfMiddleware);
+
+        $app->get('/admin/locations', [$locationController, 'showLocations'])->add($adminOnly)->add($authGate);
+
+        $app->post('/admin/locations', [$locationController, 'createLocation'])
+            ->add($adminOnly)->add($authGate)->add($csrfMiddleware);
+
+        $app->post('/admin/locations/{id}', [$locationController, 'updateLocation'])
+            ->add($adminOnly)->add($authGate)->add($csrfMiddleware);
+
+        $app->post('/admin/locations/{id}/active', [$locationController, 'setActive'])
             ->add($adminOnly)->add($authGate)->add($csrfMiddleware);
     }
 }

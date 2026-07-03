@@ -9,6 +9,7 @@ use CircuitMap\Models\AuditLogRepository;
 use CircuitMap\Models\CircuitProviderRepository;
 use CircuitMap\Models\CircuitRepository;
 use CircuitMap\Models\CircuitVersionRepository;
+use CircuitMap\Models\LocationRepository;
 use CircuitMap\Models\UserRepository;
 use CircuitMap\Services\Auth\AuthService;
 use CircuitMap\Services\Auth\CsrfService;
@@ -27,6 +28,7 @@ final class EditFlowTest extends DatabaseTestCase
     private EditController $controller;
     private CircuitRepository $circuits;
     private CircuitProviderRepository $providers;
+    private LocationRepository $locations;
     private CircuitVersionRepository $versions;
     private FileStorageService $storage;
     private int $ownerId;
@@ -42,6 +44,7 @@ final class EditFlowTest extends DatabaseTestCase
         $this->otherUserId = $this->createUser('other');
         $this->circuits = new CircuitRepository($this->pdo);
         $this->providers = new CircuitProviderRepository($this->pdo);
+        $this->locations = new LocationRepository($this->pdo);
         $this->versions = new CircuitVersionRepository($this->pdo);
         $this->storage = new FileStorageService($this->storagePath);
 
@@ -51,6 +54,7 @@ final class EditFlowTest extends DatabaseTestCase
             new CsrfService(),
             $this->circuits,
             $this->providers,
+            $this->locations,
             $this->versions,
             new AuditLogRepository($this->pdo),
             $this->storage,
@@ -194,6 +198,64 @@ final class EditFlowTest extends DatabaseTestCase
         $this->assertSame(200, $response->getStatusCode());
         $circuit = $this->circuits->findByUuid($this->uuid);
         $this->assertSame($providerId, (int) $circuit['provider_id']);
+    }
+
+    public function testLocationFieldsRoundTrip(): void
+    {
+        $aLocationId = $this->locations->insert('Main St DC', null, null);
+        $zLocationId = $this->locations->insert('Elm St POP', null, null);
+
+        $payload = [
+            'name' => 'Updated Name',
+            'a_location_id' => (string) $aLocationId,
+            'z_location_id' => (string) $zLocationId,
+            'geojson' => [
+                'type' => 'FeatureCollection',
+                'features' => [[
+                    'type' => 'Feature',
+                    'properties' => ['name' => 'Moved', 'description' => ''],
+                    'geometry' => ['type' => 'Point', 'coordinates' => [1.0, 2.0]],
+                ]],
+            ],
+        ];
+
+        $response = $this->controller->update(
+            $this->requestFor($this->ownerId, $payload),
+            (new ResponseFactory())->createResponse(),
+            ['uuid' => $this->uuid]
+        );
+
+        $this->assertSame(200, $response->getStatusCode());
+
+        $circuit = $this->circuits->findByUuid($this->uuid);
+        $this->assertSame($aLocationId, (int) $circuit['a_location_id']);
+        $this->assertSame($zLocationId, (int) $circuit['z_location_id']);
+    }
+
+    public function testSwitchingToADeactivatedLocationIsRejected(): void
+    {
+        $locationId = $this->locations->insert('Main St DC', null, null);
+        $this->locations->setActive($locationId, false);
+
+        $payload = [
+            'name' => 'Original Name',
+            'a_location_id' => (string) $locationId,
+            'geojson' => ['type' => 'FeatureCollection', 'features' => [[
+                'type' => 'Feature',
+                'properties' => ['name' => 'Moved', 'description' => ''],
+                'geometry' => ['type' => 'Point', 'coordinates' => [1.0, 2.0]],
+            ]]],
+        ];
+
+        $response = $this->controller->update(
+            $this->requestFor($this->ownerId, $payload),
+            (new ResponseFactory())->createResponse(),
+            ['uuid' => $this->uuid]
+        );
+
+        $this->assertSame(422, $response->getStatusCode());
+        $circuit = $this->circuits->findByUuid($this->uuid);
+        $this->assertNull($circuit['a_location_id']);
     }
 
     public function testSwitchingToADeactivatedProviderIsRejected(): void

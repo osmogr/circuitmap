@@ -117,6 +117,8 @@
         statusEl.textContent = 'Saving...';
 
         var providerValue = document.getElementById('edit-provider').value;
+        var aLocationValue = document.getElementById('edit-a-location').value;
+        var zLocationValue = document.getElementById('edit-z-location').value;
 
         var payload = {
             name: document.getElementById('edit-name').value,
@@ -126,6 +128,8 @@
             provider_circuit_id: document.getElementById('edit-circuit-id').value,
             order_number: document.getElementById('edit-order-number').value,
             redundant: document.getElementById('edit-redundant').value,
+            a_location_id: aLocationValue === '' ? null : aLocationValue,
+            z_location_id: zLocationValue === '' ? null : zLocationValue,
             geojson: collectFeatureCollection()
         };
 

@@ -22,16 +22,20 @@ final class CircuitRepository
         ?int $providerId = null,
         ?string $providerCircuitId = null,
         ?string $orderNumber = null,
-        bool $redundant = false
+        bool $redundant = false,
+        ?int $aLocationId = null,
+        ?int $zLocationId = null
     ): int {
         $now = gmdate('Y-m-d\TH:i:s\Z');
         $stmt = $this->pdo->prepare(
             'INSERT INTO circuits
                 (uuid, name, description, tags, owner_id, current_file_path, current_version,
-                 status, provider_id, provider_circuit_id, order_number, redundant, uploaded_at, updated_at)
+                 status, provider_id, provider_circuit_id, order_number, redundant,
+                 a_location_id, z_location_id, uploaded_at, updated_at)
              VALUES
                 (:uuid, :name, :description, :tags, :owner_id, :current_file_path, 1,
-                 \'unknown\', :provider_id, :provider_circuit_id, :order_number, :redundant, :now, :now)'
+                 \'unknown\', :provider_id, :provider_circuit_id, :order_number, :redundant,
+                 :a_location_id, :z_location_id, :now, :now)'
         );
         $stmt->execute([
             'uuid' => $uuid,
@@ -44,6 +48,8 @@ final class CircuitRepository
             'provider_circuit_id' => $providerCircuitId,
             'order_number' => $orderNumber,
             'redundant' => $redundant ? 1 : 0,
+            'a_location_id' => $aLocationId,
+            'z_location_id' => $zLocationId,
             'now' => $now,
         ]);
 
@@ -58,11 +64,14 @@ final class CircuitRepository
         $stmt = $this->pdo->query(
             'SELECT c.id, c.uuid, c.name, c.description, c.tags, c.owner_id, c.status, c.status_source,
                     c.status_updated_at, c.color, c.provider_id, c.provider_circuit_id, c.order_number,
-                    c.redundant, c.uploaded_at, c.updated_at,
+                    c.redundant, c.a_location_id, c.z_location_id, c.uploaded_at, c.updated_at,
                     p.name AS provider_name, p.tech_support_number AS provider_tech_support_number,
-                    p.account_id AS provider_account_id, p.local_rep_contact AS provider_local_rep_contact
+                    p.account_id AS provider_account_id, p.local_rep_contact AS provider_local_rep_contact,
+                    la.name AS a_location_name, lz.name AS z_location_name
              FROM circuits c
              LEFT JOIN circuit_providers p ON p.id = c.provider_id
+             LEFT JOIN locations la ON la.id = c.a_location_id
+             LEFT JOIN locations lz ON lz.id = c.z_location_id
              WHERE c.deleted_at IS NULL
              ORDER BY c.name'
         );
@@ -89,13 +98,16 @@ final class CircuitRepository
         ?int $providerId = null,
         ?string $providerCircuitId = null,
         ?string $orderNumber = null,
-        bool $redundant = false
+        bool $redundant = false,
+        ?int $aLocationId = null,
+        ?int $zLocationId = null
     ): void {
         $stmt = $this->pdo->prepare(
             'UPDATE circuits
              SET name = :name, description = :description, tags = :tags,
                  provider_id = :provider_id, provider_circuit_id = :provider_circuit_id,
                  order_number = :order_number, redundant = :redundant,
+                 a_location_id = :a_location_id, z_location_id = :z_location_id,
                  current_version = :version, updated_at = :now
              WHERE id = :id'
         );
@@ -107,6 +119,8 @@ final class CircuitRepository
             'provider_circuit_id' => $providerCircuitId,
             'order_number' => $orderNumber,
             'redundant' => $redundant ? 1 : 0,
+            'a_location_id' => $aLocationId,
+            'z_location_id' => $zLocationId,
             'version' => $newVersionNumber,
             'now' => gmdate('Y-m-d\TH:i:s\Z'),
             'id' => $id,

@@ -7,6 +7,7 @@ namespace CircuitMap\Tests\Integration;
 use CircuitMap\Models\AuditLogRepository;
 use CircuitMap\Models\CircuitProviderRepository;
 use CircuitMap\Models\CircuitRepository;
+use CircuitMap\Models\LocationRepository;
 use CircuitMap\Services\Auth\AuthService;
 use CircuitMap\Services\Auth\CsrfService;
 use CircuitMap\Services\Kml\GeoJsonConverter;
@@ -35,6 +36,7 @@ final class UploadFlowTest extends DatabaseTestCase
     private CircuitController $controller;
     private CircuitRepository $circuits;
     private CircuitProviderRepository $providers;
+    private LocationRepository $locations;
     private int $userId;
 
     protected function setUp(): void
@@ -44,6 +46,7 @@ final class UploadFlowTest extends DatabaseTestCase
         $this->userId = $this->createUser();
         $this->circuits = new CircuitRepository($this->pdo);
         $this->providers = new CircuitProviderRepository($this->pdo);
+        $this->locations = new LocationRepository($this->pdo);
         $auth = new AuthService(new UserRepository($this->pdo));
 
         $this->controller = new CircuitController(
@@ -51,6 +54,7 @@ final class UploadFlowTest extends DatabaseTestCase
             new CsrfService(),
             $this->circuits,
             $this->providers,
+            $this->locations,
             new AuditLogRepository($this->pdo),
             new FileStorageService($this->storagePath),
             new KmlParser(),
@@ -164,6 +168,29 @@ final class UploadFlowTest extends DatabaseTestCase
         $this->assertSame('CKT-123', $circuit['provider_circuit_id']);
         $this->assertSame('ORD-456', $circuit['order_number']);
         $this->assertSame(1, (int) $circuit['redundant']);
+    }
+
+    public function testLocationFieldsRoundTrip(): void
+    {
+        $aLocationId = $this->locations->insert('Main St DC', null, null);
+        $zLocationId = $this->locations->insert('Elm St POP', null, null);
+
+        $request = $this->requestWithUpload(
+            [
+                'name' => 'Circuit With Locations',
+                'a_location_id' => (string) $aLocationId,
+                'z_location_id' => (string) $zLocationId,
+            ],
+            $this->uploadedFileFrom($this->fixture('valid_simple.kml'))
+        );
+
+        $response = $this->controller->upload($request, (new ResponseFactory())->createResponse());
+
+        $this->assertSame(302, $response->getStatusCode());
+
+        $circuit = $this->circuits->listVisible()[0];
+        $this->assertSame($aLocationId, (int) $circuit['a_location_id']);
+        $this->assertSame($zLocationId, (int) $circuit['z_location_id']);
     }
 
     public function testDescriptionIsSanitizedInStoredFile(): void

@@ -8,6 +8,7 @@ use CircuitMap\Models\AuditLogRepository;
 use CircuitMap\Models\CircuitProviderRepository;
 use CircuitMap\Models\CircuitRepository;
 use CircuitMap\Models\CircuitVersionRepository;
+use CircuitMap\Models\LocationRepository;
 use CircuitMap\Services\Auth\AuthService;
 use CircuitMap\Services\Auth\CsrfService;
 use CircuitMap\Services\Kml\GeoJsonConverter;
@@ -30,6 +31,7 @@ final class EditController
         private readonly CsrfService $csrf,
         private readonly CircuitRepository $circuits,
         private readonly CircuitProviderRepository $providers,
+        private readonly LocationRepository $locations,
         private readonly CircuitVersionRepository $versions,
         private readonly AuditLogRepository $auditLog,
         private readonly FileStorageService $storage,
@@ -66,6 +68,7 @@ final class EditController
                 'circuit' => $circuit,
                 'currentUser' => $currentUser,
                 'providers' => $this->providersForEditForm($circuit),
+                'locations' => $this->locationsForEditForm($circuit),
             ]),
         ]);
         $response->getBody()->write($html);
@@ -123,6 +126,23 @@ final class EditController
             }
         }
 
+        [$aLocationId, $aLocationError] = $this->resolveLocationId(
+            $body['a_location_id'] ?? null,
+            $circuit['a_location_id'] ?? null,
+            'A-Location'
+        );
+        if ($aLocationError !== null) {
+            return ResponseHelper::json(['error' => $aLocationError], 422);
+        }
+        [$zLocationId, $zLocationError] = $this->resolveLocationId(
+            $body['z_location_id'] ?? null,
+            $circuit['z_location_id'] ?? null,
+            'Z-Location'
+        );
+        if ($zLocationError !== null) {
+            return ResponseHelper::json(['error' => $zLocationError], 422);
+        }
+
         try {
             // The submitted GeoJSON is converted back to KML server-side and
             // re-validated/re-sanitized through the exact same pipeline as a
@@ -159,7 +179,9 @@ final class EditController
             $providerId,
             $providerCircuitId === '' ? null : $providerCircuitId,
             $orderNumber === '' ? null : $orderNumber,
-            $redundant
+            $redundant,
+            $aLocationId,
+            $zLocationId
         );
 
         $this->auditLog->log(
@@ -272,5 +294,54 @@ final class EditController
         }
 
         return $providers;
+    }
+
+    /**
+     * @param mixed $rawLocationId
+     * @param mixed $currentLocationId
+     * @return array{0: ?int, 1: ?string} [locationId, errorMessage]
+     */
+    private function resolveLocationId($rawLocationId, $currentLocationId, string $label): array
+    {
+        if ($rawLocationId === null || $rawLocationId === '') {
+            return [null, null];
+        }
+
+        $locationId = (int) $rawLocationId;
+        $location = $this->locations->findById($locationId);
+        $keepingExistingLocation = $locationId === (int) ($currentLocationId ?? 0);
+        if ($location === null || (!$keepingExistingLocation && (int) $location['is_active'] !== 1)) {
+            return [null, "Selected {$label} is invalid."];
+        }
+
+        return [$locationId, null];
+    }
+
+    /**
+     * @param array<string, mixed> $circuit
+     * @return array<int, array<string, mixed>>
+     */
+    private function locationsForEditForm(array $circuit): array
+    {
+        $locations = $this->locations->listActive();
+        $listedIds = array_map(static fn (array $l) => (int) $l['id'], $locations);
+
+        // A circuit's A/Z endpoints can point at a location that's since
+        // been deactivated; they must still appear (and stay selected) in
+        // the dropdowns, otherwise saving the form again would silently
+        // clear the circuit's location.
+        foreach ([$circuit['a_location_id'] ?? null, $circuit['z_location_id'] ?? null] as $currentLocationId) {
+            if ($currentLocationId === null || in_array((int) $currentLocationId, $listedIds, true)) {
+                continue;
+            }
+            $current = $this->locations->findById((int) $currentLocationId);
+            if ($current !== null) {
+                $current['name'] .= ' (inactive)';
+                $locations[] = $current;
+                $listedIds[] = (int) $current['id'];
+            }
+        }
+
+        return $locations;
     }
 }

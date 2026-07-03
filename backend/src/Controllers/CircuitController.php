@@ -7,6 +7,7 @@ namespace CircuitMap\Controllers;
 use CircuitMap\Models\AuditLogRepository;
 use CircuitMap\Models\CircuitProviderRepository;
 use CircuitMap\Models\CircuitRepository;
+use CircuitMap\Models\LocationRepository;
 use CircuitMap\Services\Auth\AuthService;
 use CircuitMap\Services\Auth\CsrfService;
 use CircuitMap\Services\Kml\GeoJsonConverter;
@@ -49,6 +50,7 @@ final class CircuitController
         private readonly CsrfService $csrf,
         private readonly CircuitRepository $circuits,
         private readonly CircuitProviderRepository $providers,
+        private readonly LocationRepository $locations,
         private readonly AuditLogRepository $auditLog,
         private readonly FileStorageService $storage,
         private readonly KmlParser $parser,
@@ -70,6 +72,7 @@ final class CircuitController
                 'csrfToken' => $this->csrf->getToken(),
                 'currentUser' => $currentUser,
                 'providers' => $this->providers->listActive(),
+                'locations' => $this->locations->listActive(),
                 'error' => null,
             ]),
         ]);
@@ -88,6 +91,7 @@ final class CircuitController
                 'csrfToken' => $this->csrf->getToken(),
                 'currentUser' => $currentUser,
                 'providers' => $this->providers->listActive(),
+                'locations' => $this->locations->listActive(),
                 'error' => null,
             ]),
         ]);
@@ -124,6 +128,15 @@ final class CircuitController
             return $this->renderNewError($response, $providerError, 422);
         }
 
+        [$aLocationId, $aLocationError] = $this->resolveLocationId($body['a_location_id'] ?? null);
+        if ($aLocationError !== null) {
+            return $this->renderNewError($response, $aLocationError, 422);
+        }
+        [$zLocationId, $zLocationError] = $this->resolveLocationId($body['z_location_id'] ?? null);
+        if ($zLocationError !== null) {
+            return $this->renderNewError($response, $zLocationError, 422);
+        }
+
         $dom = $this->geoJsonConverter->toKml(['features' => []]);
         $normalizedXml = (string) $dom->saveXML();
         $uuid = Uuid::v4();
@@ -139,7 +152,9 @@ final class CircuitController
             $providerId,
             $providerCircuitId === '' ? null : $providerCircuitId,
             $orderNumber === '' ? null : $orderNumber,
-            $redundant
+            $redundant,
+            $aLocationId,
+            $zLocationId
         );
 
         $this->auditLog->log(
@@ -177,6 +192,15 @@ final class CircuitController
             return $this->renderUploadError($response, $providerError, 422);
         }
 
+        [$aLocationId, $aLocationError] = $this->resolveLocationId($body['a_location_id'] ?? null);
+        if ($aLocationError !== null) {
+            return $this->renderUploadError($response, $aLocationError, 422);
+        }
+        [$zLocationId, $zLocationError] = $this->resolveLocationId($body['z_location_id'] ?? null);
+        if ($zLocationError !== null) {
+            return $this->renderUploadError($response, $zLocationError, 422);
+        }
+
         $extension = strtolower((string) pathinfo((string) $file->getClientFilename(), PATHINFO_EXTENSION));
         if (!in_array($extension, self::ALLOWED_EXTENSIONS, true)) {
             return $this->renderUploadError($response, 'Only .kml or .kmz files are accepted.', 422);
@@ -208,7 +232,9 @@ final class CircuitController
             $providerId,
             $providerCircuitId === '' ? null : $providerCircuitId,
             $orderNumber === '' ? null : $orderNumber,
-            $redundant
+            $redundant,
+            $aLocationId,
+            $zLocationId
         );
 
         $this->auditLog->log(
@@ -307,6 +333,25 @@ final class CircuitController
         return [$providerId, null];
     }
 
+    /**
+     * @param mixed $rawLocationId
+     * @return array{0: ?int, 1: ?string} [locationId, errorMessage]
+     */
+    private function resolveLocationId($rawLocationId): array
+    {
+        if (!is_string($rawLocationId) || trim($rawLocationId) === '') {
+            return [null, null];
+        }
+
+        $locationId = (int) $rawLocationId;
+        $location = $this->locations->findById($locationId);
+        if ($location === null || (int) $location['is_active'] !== 1) {
+            return [null, 'Selected location is invalid.'];
+        }
+
+        return [$locationId, null];
+    }
+
     private function readAndSniffKml(UploadedFileInterface $file): string
     {
         $rawXml = (string) $file->getStream()->getContents();
@@ -379,6 +424,7 @@ final class CircuitController
                 'csrfToken' => $this->csrf->getToken(),
                 'currentUser' => $currentUser,
                 'providers' => $this->providers->listActive(),
+                'locations' => $this->locations->listActive(),
                 'error' => $message,
             ]),
         ]);
@@ -397,6 +443,7 @@ final class CircuitController
                 'csrfToken' => $this->csrf->getToken(),
                 'currentUser' => $currentUser,
                 'providers' => $this->providers->listActive(),
+                'locations' => $this->locations->listActive(),
                 'error' => $message,
             ]),
         ]);

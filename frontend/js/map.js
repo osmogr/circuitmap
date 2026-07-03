@@ -27,7 +27,16 @@
 
     var layersByUuid = {};
 
-    function popupHtml(feature) {
+    function metaRow(label, value) {
+        if (!value) {
+            return null;
+        }
+        var row = document.createElement('div');
+        row.textContent = label + ': ' + value;
+        return row;
+    }
+
+    function popupHtml(feature, circuit) {
         var props = feature.properties || {};
         var name = props.name ? String(props.name) : '(unnamed)';
         var description = props.description ? String(props.description) : '';
@@ -42,6 +51,27 @@
             desc.innerHTML = description;
             box.appendChild(desc);
         }
+
+        if (circuit) {
+            var meta = document.createElement('div');
+            meta.className = 'circuit-popup-meta';
+            [
+                metaRow('Circuit', circuit.name),
+                metaRow('ID', circuit.uuid),
+                metaRow('Provider', circuit.provider_name),
+                metaRow('Provider circuit ID', circuit.provider_circuit_id),
+                metaRow('Order number', circuit.order_number),
+                metaRow('Account ID', circuit.provider_account_id),
+                metaRow('Tech support', circuit.provider_tech_support_number),
+                metaRow('Local rep', circuit.provider_local_rep_contact)
+            ].forEach(function (row) {
+                if (row) {
+                    meta.appendChild(row);
+                }
+            });
+            box.appendChild(meta);
+        }
+
         return box;
     }
 
@@ -68,7 +98,7 @@
                     },
                     onEachFeature: function (feature, layer) {
                         layer.bindPopup(function () {
-                            return popupHtml(feature);
+                            return popupHtml(feature, circuit);
                         });
                     }
                 });

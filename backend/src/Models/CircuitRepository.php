@@ -56,12 +56,15 @@ final class CircuitRepository
     public function listVisible(): array
     {
         $stmt = $this->pdo->query(
-            'SELECT id, uuid, name, description, tags, owner_id, status, status_source,
-                    status_updated_at, color, provider_id, provider_circuit_id, order_number, redundant,
-                    uploaded_at, updated_at
-             FROM circuits
-             WHERE deleted_at IS NULL
-             ORDER BY name'
+            'SELECT c.id, c.uuid, c.name, c.description, c.tags, c.owner_id, c.status, c.status_source,
+                    c.status_updated_at, c.color, c.provider_id, c.provider_circuit_id, c.order_number,
+                    c.redundant, c.uploaded_at, c.updated_at,
+                    p.name AS provider_name, p.tech_support_number AS provider_tech_support_number,
+                    p.account_id AS provider_account_id, p.local_rep_contact AS provider_local_rep_contact
+             FROM circuits c
+             LEFT JOIN circuit_providers p ON p.id = c.provider_id
+             WHERE c.deleted_at IS NULL
+             ORDER BY c.name'
         );
         return $stmt->fetchAll();
     }

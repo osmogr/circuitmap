@@ -195,3 +195,11 @@ main:has(.edit-page) {
     flex-grow: 1;
     height: 100%;
 }
+
+.circuit-popup-meta {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #ddd;
+    font-size: 0.85rem;
+    color: #444;
+}

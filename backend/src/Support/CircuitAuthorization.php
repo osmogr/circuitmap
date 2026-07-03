@@ -6,8 +6,11 @@ namespace CircuitMap\Support;
 
 /**
  * Shared ownership rule: an editor may act on circuits they uploaded,
- * an admin may act on any circuit. Used by both circuit editing and
- * status-setting endpoints so the rule only lives in one place.
+ * an admin may act on any circuit. A readonly user (or any unrecognized
+ * role) may never edit/delete, even if they happen to own the circuit -
+ * demoting a user to readonly must fully revoke edit rights. Used by both
+ * circuit editing and status-setting endpoints so the rule only lives in
+ * one place.
  */
 final class CircuitAuthorization
 {
@@ -20,6 +23,13 @@ final class CircuitAuthorization
         if (!is_array($currentUser)) {
             return false;
         }
-        return (int) $currentUser['id'] === (int) $circuit['owner_id'] || ($currentUser['role'] ?? null) === 'admin';
+        $role = $currentUser['role'] ?? null;
+        if ($role === 'admin') {
+            return true;
+        }
+        if ($role === 'editor') {
+            return (int) $currentUser['id'] === (int) $circuit['owner_id'];
+        }
+        return false;
     }
 }

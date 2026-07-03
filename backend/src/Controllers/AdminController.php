@@ -16,7 +16,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 final class AdminController
 {
-    private const VALID_ROLES = ['editor', 'admin'];
+    private const VALID_ROLES = ['readonly', 'editor', 'admin'];
 
     public function __construct(
         private readonly UserRepository $users,

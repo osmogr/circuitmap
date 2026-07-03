@@ -20,7 +20,7 @@ services:
       MAX_UPLOAD_BYTES: "${MAX_UPLOAD_BYTES:-10485760}"
       PROXY_AUTH_ENABLED: "${PROXY_AUTH_ENABLED:-false}"
       PROXY_AUTH_HEADER: "${PROXY_AUTH_HEADER:-REMOTE_USER}"
-      PROXY_AUTH_DEFAULT_ROLE: "${PROXY_AUTH_DEFAULT_ROLE:-editor}"
+      PROXY_AUTH_DEFAULT_ROLE: "${PROXY_AUTH_DEFAULT_ROLE:-readonly}"
       BASE_PATH: "${BASE_PATH:-}"
     volumes:
       - kml-data:/var/lib/circuitmap/kml

@@ -31,6 +31,7 @@ use CircuitMap\Services\Kml\KmlParser;
 use CircuitMap\Services\Kml\KmlSanitizer;
 use CircuitMap\Services\Kml\KmlValidator;
 use CircuitMap\Services\Kml\KmzExtractor;
+use CircuitMap\Services\Geocoding\NominatimGeocodingService;
 use CircuitMap\Services\RateLimit\RateLimiterService;
 use CircuitMap\Services\Status\ManualStatusProvider;
 use CircuitMap\Services\Storage\FileStorageService;
@@ -71,9 +72,9 @@ final class App
         // executes AFTER the session is started but BEFORE route-specific
         // middleware like AuthGateMiddleware reads currentUser().
         if (Env::getBool('PROXY_AUTH_ENABLED', false)) {
-            $defaultRole = Env::get('PROXY_AUTH_DEFAULT_ROLE', 'editor');
-            if (!in_array($defaultRole, ['editor', 'admin'], true)) {
-                $defaultRole = 'editor';
+            $defaultRole = Env::get('PROXY_AUTH_DEFAULT_ROLE', 'readonly');
+            if (!in_array($defaultRole, ['readonly', 'editor', 'admin'], true)) {
+                $defaultRole = 'readonly';
             }
 
             $app->add(new ProxyAuthMiddleware(
@@ -122,6 +123,13 @@ final class App
         // StatusProviderInterface binding: swap this for a future polling
         // or webhook-based adapter without touching StatusController.
         $statusProvider = new ManualStatusProvider($circuits);
+        // GeocodingServiceInterface binding: swap this for a future
+        // provider (Google/Mapbox/self-hosted Nominatim) without touching
+        // LocationController.
+        $geocodingService = new NominatimGeocodingService(
+            Env::get('GEOCODING_BASE_URL', 'https://nominatim.openstreetmap.org/search'),
+            Env::get('GEOCODING_USER_AGENT', 'CircuitMap/1.0')
+        );
 
         $authGateMiddleware = new AuthGateMiddleware($auth);
         $csrfMiddleware = new CsrfMiddleware($csrf);
@@ -157,7 +165,7 @@ final class App
             'statusController' => new StatusController($circuits, $auditLog, $statusProvider),
             'adminController' => new AdminController($users, $auditLog, $csrf),
             'circuitProviderController' => new CircuitProviderController($circuitProviders, $auditLog, $csrf),
-            'locationController' => new LocationController($locations, $auditLog, $csrf),
+            'locationController' => new LocationController($locations, $auditLog, $csrf, $geocodingService),
             'editController' => new EditController(
                 $auth,
                 $csrf,

@@ -15,7 +15,13 @@
         if (!currentUser) {
             return false;
         }
-        return currentUser.role === 'admin' || currentUser.id === circuit.owner_id;
+        if (currentUser.role === 'admin') {
+            return true;
+        }
+        if (currentUser.role === 'editor') {
+            return currentUser.id === circuit.owner_id;
+        }
+        return false;
     }
 
     var map = L.map('map').setView([20, 0], 2);

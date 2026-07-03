@@ -35,6 +35,7 @@ use CircuitMap\Support\View;
                         <form method="post" action="<?= BasePath::url('/admin/users/' . (int) $user['id'] . '/role') ?>" class="inline-form">
                             <input type="hidden" name="csrf_token" value="<?= View::escape($csrfToken) ?>">
                             <select name="role" class="role-select">
+                                <option value="readonly" <?= $user['role'] === 'readonly' ? 'selected' : '' ?>>readonly</option>
                                 <option value="editor" <?= $user['role'] === 'editor' ? 'selected' : '' ?>>editor</option>
                                 <option value="admin" <?= $user['role'] === 'admin' ? 'selected' : '' ?>>admin</option>
                             </select>
@@ -64,6 +65,7 @@ use CircuitMap\Support\View;
         <label>
             Role
             <select name="role">
+                <option value="readonly" selected>readonly</option>
                 <option value="editor">editor</option>
                 <option value="admin">admin</option>
             </select>

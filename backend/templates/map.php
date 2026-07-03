@@ -8,7 +8,7 @@ use CircuitMap\Support\View;
 <div class="map-page">
     <aside class="circuit-list">
         <h2>Circuits</h2>
-        <?php if ($currentUser !== null): ?>
+        <?php if ($currentUser !== null && in_array($currentUser['role'] ?? null, ['admin', 'editor'], true)): ?>
             <p><a href="<?= BasePath::url('/upload') ?>">Upload a circuit</a></p>
             <p><a href="<?= BasePath::url('/circuits/new') ?>">Create new circuit</a></p>
         <?php endif; ?>

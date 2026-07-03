@@ -9,6 +9,7 @@ use CircuitMap\Controllers\LocationController;
 use CircuitMap\Middleware\AuthGateMiddleware;
 use CircuitMap\Middleware\CsrfMiddleware;
 use CircuitMap\Middleware\RateLimitMiddleware;
+use CircuitMap\Middleware\RoleMiddleware;
 use CircuitMap\Services\RateLimit\RateLimiterService;
 use CircuitMap\Support\Env;
 use Slim\App;
@@ -35,16 +36,20 @@ final class CircuitRoutes
         /** @var RateLimiterService $rateLimiter */
         $rateLimiter = $services['rateLimiter'];
 
-        $app->get('/upload', [$controller, 'showUploadForm'])->add($authGate);
+        $editorOrAdmin = new RoleMiddleware(['editor', 'admin']);
+
+        $app->get('/upload', [$controller, 'showUploadForm'])->add($editorOrAdmin)->add($authGate);
 
         $app->post('/upload', [$controller, 'upload'])
+            ->add($editorOrAdmin)
             ->add($authGate)
             ->add($csrfMiddleware)
             ->add(new RateLimitMiddleware($rateLimiter, 'upload', 3600, 20, 'user'));
 
-        $app->get('/circuits/new', [$controller, 'showNewForm'])->add($authGate);
+        $app->get('/circuits/new', [$controller, 'showNewForm'])->add($editorOrAdmin)->add($authGate);
 
         $app->post('/circuits/new', [$controller, 'createBlank'])
+            ->add($editorOrAdmin)
             ->add($authGate)
             ->add($csrfMiddleware)
             ->add(new RateLimitMiddleware($rateLimiter, 'upload', 3600, 20, 'user'));

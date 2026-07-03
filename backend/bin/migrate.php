@@ -39,15 +39,23 @@ foreach ($files as $file) {
         exit(1);
     }
 
+    // Foreign key enforcement must be toggled outside any transaction (it's
+    // a no-op mid-transaction) and disabled for the duration of each
+    // migration: SQLite re-validates FK integrity across all referencing
+    // child tables when a parent table is dropped, which a table-rebuild
+    // migration (e.g. changing a CHECK constraint) always triggers.
+    $pdo->exec('PRAGMA foreign_keys = OFF');
     $pdo->beginTransaction();
     try {
         $pdo->exec($sql);
         $insert = $pdo->prepare('INSERT INTO schema_migrations (filename, applied_at) VALUES (?, ?)');
         $insert->execute([$filename, gmdate('Y-m-d\TH:i:s\Z')]);
         $pdo->commit();
+        $pdo->exec('PRAGMA foreign_keys = ON');
         fwrite(STDOUT, "Applied migration: {$filename}\n");
     } catch (\Throwable $e) {
         $pdo->rollBack();
+        $pdo->exec('PRAGMA foreign_keys = ON');
         fwrite(STDERR, "Migration failed: {$filename}: {$e->getMessage()}\n");
         exit(1);
     }

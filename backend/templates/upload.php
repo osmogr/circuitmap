@@ -36,7 +36,7 @@ use CircuitMap\Support\View;
                 <?php endforeach; ?>
             </select>
         </label>
-        <?php if (($currentUser['role'] ?? null) === 'admin'): ?>
+        <?php if (in_array($currentUser['role'] ?? null, ['admin', 'editor'], true)): ?>
             <p class="hint"><a href="<?= BasePath::url('/admin/providers') ?>">Manage circuit providers</a></p>
         <?php endif; ?>
         <label>
@@ -57,7 +57,7 @@ use CircuitMap\Support\View;
                 <?php endforeach; ?>
             </select>
         </label>
-        <?php if (($currentUser['role'] ?? null) === 'admin'): ?>
+        <?php if (in_array($currentUser['role'] ?? null, ['admin', 'editor'], true)): ?>
             <p class="hint"><a href="<?= BasePath::url('/admin/locations') ?>">Manage locations</a></p>
         <?php endif; ?>
         <label>

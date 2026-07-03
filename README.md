@@ -74,9 +74,15 @@ container as `/circuitmap/login`, not `/login`.
 
 ## Authentication and roles
 
-- Two roles: `editor` (can upload circuits, and edit/delete/set status on
-  circuits they uploaded) and `admin` (can do all of that on every
-  circuit, plus manage users at `/admin/users` and review `/admin/audit-log`).
+- Three roles:
+  - `readonly` (default for new users): can view the map and circuits, but
+    cannot create, edit, or delete anything.
+  - `editor`: can upload/create circuits, and edit/delete/set status on
+    circuits they uploaded; can also add and update circuit providers and
+    sites/locations, but cannot deactivate them.
+  - `admin`: can do all of that on every circuit (not just ones they
+    uploaded), deactivate providers and sites/locations, manage users at
+    `/admin/users`, and review `/admin/audit-log`.
 - Read-only map viewing is public by default; set `REQUIRE_AUTH_FOR_VIEW=true`
   to gate it too.
 - Sessions are stored in the database (not container-local disk), so they

@@ -16,14 +16,17 @@ use Psr\Http\Server\RequestHandlerInterface as RequestHandler;
  */
 final class RoleMiddleware implements MiddlewareInterface
 {
-    public function __construct(private readonly string $requiredRole)
+    /**
+     * @param array<int, string> $allowedRoles
+     */
+    public function __construct(private readonly array $allowedRoles)
     {
     }
 
     public function process(Request $request, RequestHandler $handler): Response
     {
         $user = $request->getAttribute('currentUser');
-        if (!is_array($user) || ($user['role'] ?? null) !== $this->requiredRole) {
+        if (!is_array($user) || !in_array($user['role'] ?? null, $this->allowedRoles, true)) {
             return ResponseHelper::json(['error' => 'Forbidden'], 403);
         }
 

@@ -7,6 +7,7 @@ namespace CircuitMap\Controllers;
 use CircuitMap\Models\AuditLogRepository;
 use CircuitMap\Models\LocationRepository;
 use CircuitMap\Services\Auth\CsrfService;
+use CircuitMap\Services\Geocoding\GeocodingServiceInterface;
 use CircuitMap\Support\BasePath;
 use CircuitMap\Support\ClientIp;
 use CircuitMap\Support\LocationIcon;
@@ -20,7 +21,8 @@ final class LocationController
     public function __construct(
         private readonly LocationRepository $locations,
         private readonly AuditLogRepository $auditLog,
-        private readonly CsrfService $csrf
+        private readonly CsrfService $csrf,
+        private readonly GeocodingServiceInterface $geocoding
     ) {
     }
 
@@ -59,6 +61,29 @@ final class LocationController
         );
 
         return ResponseHelper::json(['locations' => $locations]);
+    }
+
+    /**
+     * Looks up an address and returns coordinates for the "Look up" button
+     * on the add/edit location forms. Returns 404 if the address has no
+     * match or the geocoding service is unavailable - either way the
+     * frontend falls back to letting the user place the pin manually.
+     */
+    public function geocodeAddress(Request $request, Response $response): Response
+    {
+        $body = (array) $request->getParsedBody();
+        $address = $this->nullableTrim($body['address'] ?? null);
+
+        if ($address === null) {
+            return ResponseHelper::json(['error' => 'An address is required.'], 422);
+        }
+
+        $result = $this->geocoding->geocode($address);
+        if ($result === null) {
+            return ResponseHelper::json(['error' => 'Address not found.'], 404);
+        }
+
+        return ResponseHelper::json($result);
     }
 
     public function createLocation(Request $request, Response $response): Response

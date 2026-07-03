@@ -12,18 +12,23 @@ use CircuitMap\Services\Auth\CsrfService;
 use CircuitMap\Services\Storage\FileStorageService;
 use CircuitMap\Support\Uuid;
 use CircuitMap\Tests\Support\DatabaseTestCase;
+use CircuitMap\Tests\Support\FakeGeocodingService;
 use Slim\Psr7\Factory\ResponseFactory;
 use Slim\Psr7\Factory\ServerRequestFactory;
 
 /**
  * Exercises LocationController directly (real DB), same scope as the other
  * flow tests: business logic against a real database, not the full
- * HTTP/auth/CSRF/role-middleware stack.
+ * HTTP/auth/CSRF/role-middleware stack. Real Nominatim network calls and
+ * all Leaflet map interaction (drag/click/reveal) are manual-only, covered
+ * separately by verification against the running container - same
+ * convention as UploadFlowTest's auth/CSRF gating note.
  */
 final class LocationAdminFlowTest extends DatabaseTestCase
 {
     private LocationController $controller;
     private LocationRepository $locations;
+    private FakeGeocodingService $geocoding;
     private int $adminId;
 
     protected function setUp(): void
@@ -32,11 +37,13 @@ final class LocationAdminFlowTest extends DatabaseTestCase
 
         $this->adminId = $this->createUser('admin', 'admin');
         $this->locations = new LocationRepository($this->pdo);
+        $this->geocoding = new FakeGeocodingService();
 
         $this->controller = new LocationController(
             $this->locations,
             new AuditLogRepository($this->pdo),
-            new CsrfService()
+            new CsrfService(),
+            $this->geocoding
         );
     }
 
@@ -45,6 +52,41 @@ final class LocationAdminFlowTest extends DatabaseTestCase
         return (new ServerRequestFactory())->createServerRequest($method, $uri)
             ->withParsedBody($body)
             ->withAttribute('currentUser', ['id' => $this->adminId, 'username' => 'admin', 'role' => 'admin']);
+    }
+
+    public function testGeocodeAddressReturnsCoordinatesOnMatch(): void
+    {
+        $this->geocoding->setResult(['latitude' => 39.781721, 'longitude' => -89.650148]);
+
+        $request = $this->requestWithBody('POST', '/admin/locations/geocode', ['address' => '123 Main St']);
+        $response = $this->controller->geocodeAddress($request, (new ResponseFactory())->createResponse());
+
+        $this->assertSame(200, $response->getStatusCode());
+        $body = json_decode((string) $response->getBody(), true);
+        $this->assertEqualsWithDelta(39.781721, $body['latitude'], 0.0001);
+        $this->assertEqualsWithDelta(-89.650148, $body['longitude'], 0.0001);
+        $this->assertSame('123 Main St', $this->geocoding->lastAddress);
+    }
+
+    public function testGeocodeAddressReturns404WhenNotFound(): void
+    {
+        $this->geocoding->setResult(null);
+
+        $request = $this->requestWithBody('POST', '/admin/locations/geocode', ['address' => 'nowhere at all']);
+        $response = $this->controller->geocodeAddress($request, (new ResponseFactory())->createResponse());
+
+        $this->assertSame(404, $response->getStatusCode());
+        $body = json_decode((string) $response->getBody(), true);
+        $this->assertArrayHasKey('error', $body);
+    }
+
+    public function testGeocodeAddressReturns422WhenAddressMissing(): void
+    {
+        $request = $this->requestWithBody('POST', '/admin/locations/geocode', []);
+        $response = $this->controller->geocodeAddress($request, (new ResponseFactory())->createResponse());
+
+        $this->assertSame(422, $response->getStatusCode());
+        $this->assertSame(0, $this->geocoding->callCount);
     }
 
     public function testCreateLocationPersistsAllFields(): void

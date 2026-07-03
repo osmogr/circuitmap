@@ -143,6 +143,21 @@ main:has(.edit-page) {
     margin-right: 0.5rem;
 }
 
+.location-geocode-btn {
+    margin-left: 0.4rem;
+}
+
+.location-geocode-status {
+    color: #a33;
+}
+
+.location-picker-map {
+    width: 100%;
+    max-width: 900px;
+    height: 400px;
+    margin: 0.5rem 0 1.5rem;
+}
+
 .new-user-form {
     max-width: 320px;
 }

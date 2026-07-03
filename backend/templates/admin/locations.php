@@ -7,6 +7,7 @@
 use CircuitMap\Support\BasePath;
 use CircuitMap\Support\View;
 ?>
+<link rel="stylesheet" href="<?= BasePath::url('/assets/vendor/leaflet/leaflet.css') ?>">
 <div class="admin-page">
     <h1>Manage locations</h1>
     <p><a href="<?= BasePath::url('/admin/providers') ?>">Manage circuit providers</a></p>
@@ -45,7 +46,10 @@ use CircuitMap\Support\View;
                     </td>
                     <td>
                         <input type="text" form="<?= $formId ?>" name="address"
+                               id="location-<?= (int) $location['id'] ?>-address"
                                value="<?= View::escape($location['address'] ?? '') ?>" maxlength="500">
+                        <button type="button" class="location-geocode-btn" data-target="<?= (int) $location['id'] ?>">Look up</button>
+                        <p class="hint location-geocode-status" data-target="<?= (int) $location['id'] ?>" hidden></p>
                     </td>
                     <td>
                         <input type="text" form="<?= $formId ?>" name="notes"
@@ -53,10 +57,12 @@ use CircuitMap\Support\View;
                     </td>
                     <td>
                         <input type="text" form="<?= $formId ?>" name="latitude" inputmode="decimal"
+                               id="location-<?= (int) $location['id'] ?>-latitude"
                                value="<?= View::escape((string) ($location['latitude'] ?? '')) ?>" maxlength="20">
                     </td>
                     <td>
                         <input type="text" form="<?= $formId ?>" name="longitude" inputmode="decimal"
+                               id="location-<?= (int) $location['id'] ?>-longitude"
                                value="<?= View::escape((string) ($location['longitude'] ?? '')) ?>" maxlength="20">
                     </td>
                     <td>
@@ -83,6 +89,8 @@ use CircuitMap\Support\View;
         </tbody>
     </table>
 
+    <div id="location-picker-map" class="location-picker-map" hidden></div>
+
     <h2>Add location</h2>
     <form method="post" action="<?= BasePath::url('/admin/locations') ?>" class="new-location-form">
         <input type="hidden" name="csrf_token" value="<?= View::escape($csrfToken) ?>">
@@ -92,19 +100,21 @@ use CircuitMap\Support\View;
         </label>
         <label>
             Address
-            <input type="text" name="address" maxlength="500">
+            <input type="text" name="address" id="new-location-address" maxlength="500">
         </label>
+        <button type="button" class="location-geocode-btn" data-target="new">Look up</button>
+        <p class="hint location-geocode-status" data-target="new" hidden></p>
         <label>
             Notes
             <input type="text" name="notes" maxlength="500">
         </label>
         <label>
             Latitude
-            <input type="text" name="latitude" inputmode="decimal" maxlength="20">
+            <input type="text" name="latitude" id="new-location-latitude" inputmode="decimal" maxlength="20">
         </label>
         <label>
             Longitude
-            <input type="text" name="longitude" inputmode="decimal" maxlength="20">
+            <input type="text" name="longitude" id="new-location-longitude" inputmode="decimal" maxlength="20">
         </label>
         <label>
             Icon
@@ -119,3 +129,7 @@ use CircuitMap\Support\View;
         <button type="submit">Create location</button>
     </form>
 </div>
+<script src="<?= BasePath::url('/assets/js/base-path.js') ?>"></script>
+<script src="<?= BasePath::url('/assets/vendor/leaflet/leaflet.js') ?>"></script>
+<script src="<?= BasePath::url('/assets/js/csrf.js') ?>"></script>
+<script src="<?= BasePath::url('/assets/js/locations.js') ?>"></script>

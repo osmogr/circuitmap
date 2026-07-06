@@ -1,6 +1,7 @@
 <?php
 /** @var array<string, mixed>|null $currentUser */
 
+use CircuitMap\Support\Asset;
 use CircuitMap\Support\BasePath;
 ?>
 <div class="report-page">
@@ -50,5 +51,5 @@ use CircuitMap\Support\BasePath;
     $currentUser === null ? null : ['id' => $currentUser['id'], 'role' => $currentUser['role']],
     JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP
 ) ?></script>
-<script src="<?= BasePath::url('/assets/js/base-path.js') ?>"></script>
-<script src="<?= BasePath::url('/assets/js/report.js') ?>"></script>
+<script src="<?= Asset::url('/assets/js/base-path.js') ?>"></script>
+<script src="<?= Asset::url('/assets/js/report.js') ?>"></script>

@@ -37,6 +37,7 @@ use CircuitMap\Services\Status\ManualStatusProvider;
 use CircuitMap\Services\Storage\FileStorageService;
 use CircuitMap\Support\BasePath;
 use CircuitMap\Support\Database;
+use CircuitMap\Support\Asset;
 use CircuitMap\Support\Env;
 use CircuitMap\Support\View;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -49,6 +50,7 @@ final class App
     public static function create(): SlimApp
     {
         BasePath::configure(Env::get('BASE_PATH', ''));
+        Asset::configure(Env::get('FRONTEND_PATH', '/var/www/frontend'));
         View::setTemplatesPath(dirname(__DIR__) . '/templates');
 
         $pdo = Database::connection();

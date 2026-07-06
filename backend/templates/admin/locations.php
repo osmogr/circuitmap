@@ -4,10 +4,11 @@
 /** @var array<string, array{label: string, symbol: string}> $iconOptions */
 /** @var string|null $error */
 
+use CircuitMap\Support\Asset;
 use CircuitMap\Support\BasePath;
 use CircuitMap\Support\View;
 ?>
-<link rel="stylesheet" href="<?= BasePath::url('/assets/vendor/leaflet/leaflet.css') ?>">
+<link rel="stylesheet" href="<?= Asset::url('/assets/vendor/leaflet/leaflet.css') ?>">
 <div class="admin-page">
     <h1>Manage locations</h1>
     <p><a href="<?= BasePath::url('/admin/providers') ?>">Manage circuit providers</a></p>
@@ -129,7 +130,7 @@ use CircuitMap\Support\View;
         <button type="submit">Create location</button>
     </form>
 </div>
-<script src="<?= BasePath::url('/assets/js/base-path.js') ?>"></script>
-<script src="<?= BasePath::url('/assets/vendor/leaflet/leaflet.js') ?>"></script>
-<script src="<?= BasePath::url('/assets/js/csrf.js') ?>"></script>
-<script src="<?= BasePath::url('/assets/js/locations.js') ?>"></script>
+<script src="<?= Asset::url('/assets/js/base-path.js') ?>"></script>
+<script src="<?= Asset::url('/assets/vendor/leaflet/leaflet.js') ?>"></script>
+<script src="<?= Asset::url('/assets/js/csrf.js') ?>"></script>
+<script src="<?= Asset::url('/assets/js/locations.js') ?>"></script>

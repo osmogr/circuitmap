@@ -4,6 +4,7 @@
 /** @var string $csrfToken */
 /** @var array<string, mixed>|null $currentUser */
 
+use CircuitMap\Support\Asset;
 use CircuitMap\Support\BasePath;
 use CircuitMap\Support\View;
 ?>
@@ -15,7 +16,7 @@ use CircuitMap\Support\View;
     <meta name="csrf-token" content="<?= View::escape($csrfToken) ?>">
     <meta name="base-path" content="<?= View::escape(BasePath::get()) ?>">
     <title><?= View::escape($title) ?> - CircuitMap</title>
-    <link rel="stylesheet" href="<?= BasePath::url('/assets/css/app.css') ?>">
+    <link rel="stylesheet" href="<?= Asset::url('/assets/css/app.css') ?>">
 </head>
 <body>
     <header class="site-header">

@@ -5,11 +5,12 @@
 /** @var array<int, array<string, mixed>> $locations */
 /** @var array<string, mixed>|null $currentUser */
 
+use CircuitMap\Support\Asset;
 use CircuitMap\Support\BasePath;
 use CircuitMap\Support\View;
 ?>
-<link rel="stylesheet" href="<?= BasePath::url('/assets/vendor/leaflet/leaflet.css') ?>">
-<link rel="stylesheet" href="<?= BasePath::url('/assets/vendor/geoman/leaflet-geoman.css') ?>">
+<link rel="stylesheet" href="<?= Asset::url('/assets/vendor/leaflet/leaflet.css') ?>">
+<link rel="stylesheet" href="<?= Asset::url('/assets/vendor/geoman/leaflet-geoman.css') ?>">
 <div class="edit-page" data-circuit-uuid="<?= View::escape($circuit['uuid']) ?>">
     <aside class="edit-sidebar">
         <h1>Edit circuit</h1>
@@ -99,8 +100,8 @@ use CircuitMap\Support\View;
     </aside>
     <div id="map"></div>
 </div>
-<script src="<?= BasePath::url('/assets/js/base-path.js') ?>"></script>
-<script src="<?= BasePath::url('/assets/vendor/leaflet/leaflet.js') ?>"></script>
-<script src="<?= BasePath::url('/assets/vendor/geoman/leaflet-geoman.js') ?>"></script>
-<script src="<?= BasePath::url('/assets/js/csrf.js') ?>"></script>
-<script src="<?= BasePath::url('/assets/js/editor.js') ?>"></script>
+<script src="<?= Asset::url('/assets/js/base-path.js') ?>"></script>
+<script src="<?= Asset::url('/assets/vendor/leaflet/leaflet.js') ?>"></script>
+<script src="<?= Asset::url('/assets/vendor/geoman/leaflet-geoman.js') ?>"></script>
+<script src="<?= Asset::url('/assets/js/csrf.js') ?>"></script>
+<script src="<?= Asset::url('/assets/js/editor.js') ?>"></script>

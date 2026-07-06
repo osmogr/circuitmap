@@ -1,10 +1,11 @@
 <?php
 /** @var array<string, mixed>|null $currentUser */
 
+use CircuitMap\Support\Asset;
 use CircuitMap\Support\BasePath;
 use CircuitMap\Support\View;
 ?>
-<link rel="stylesheet" href="<?= BasePath::url('/assets/vendor/leaflet/leaflet.css') ?>">
+<link rel="stylesheet" href="<?= Asset::url('/assets/vendor/leaflet/leaflet.css') ?>">
 <div class="map-page">
     <aside class="circuit-list">
         <h2>Circuits</h2>
@@ -23,6 +24,6 @@ use CircuitMap\Support\View;
     $currentUser === null ? null : ['id' => $currentUser['id'], 'role' => $currentUser['role']],
     JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP
 ) ?></script>
-<script src="<?= BasePath::url('/assets/js/base-path.js') ?>"></script>
-<script src="<?= BasePath::url('/assets/vendor/leaflet/leaflet.js') ?>"></script>
-<script src="<?= BasePath::url('/assets/js/map.js') ?>"></script>
+<script src="<?= Asset::url('/assets/js/base-path.js') ?>"></script>
+<script src="<?= Asset::url('/assets/vendor/leaflet/leaflet.js') ?>"></script>
+<script src="<?= Asset::url('/assets/js/map.js') ?>"></script>

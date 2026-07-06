@@ -4,6 +4,7 @@
 /** @var array<string, mixed> $currentUser */
 /** @var string|null $error */
 
+use CircuitMap\Support\Asset;
 use CircuitMap\Support\BasePath;
 use CircuitMap\Support\View;
 ?>
@@ -73,4 +74,4 @@ use CircuitMap\Support\View;
         <button type="submit">Create user</button>
     </form>
 </div>
-<script src="<?= BasePath::url('/assets/js/admin.js') ?>"></script>
+<script src="<?= Asset::url('/assets/js/admin.js') ?>"></script>

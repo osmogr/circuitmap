@@ -54,11 +54,14 @@ final class CircuitRoutes
             ->add($csrfMiddleware)
             ->add(new RateLimitMiddleware($rateLimiter, 'upload', 3600, 20, 'user'));
 
+        $reportPage = $app->get('/circuits/report', [$controller, 'showReport']);
+
         $apiCircuits = $app->get('/api/circuits', [$controller, 'listJson']);
         $apiGeoJson = $app->get('/api/circuits/{uuid}/geojson', [$controller, 'geoJson']);
         $apiLocations = $app->get('/api/locations', [$locationController, 'listJson']);
 
         if (Env::getBool('REQUIRE_AUTH_FOR_VIEW', false)) {
+            $reportPage->add($authGate);
             $apiCircuits->add($authGate);
             $apiGeoJson->add($authGate);
             $apiLocations->add($authGate);

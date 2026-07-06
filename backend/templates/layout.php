@@ -21,7 +21,12 @@ use CircuitMap\Support\View;
     <header class="site-header">
         <a class="site-title" href="<?= BasePath::url('/') ?>">CircuitMap</a>
         <nav>
+            <a href="<?= BasePath::url('/circuits/report') ?>">All Circuits</a>
             <?php if ($currentUser !== null): ?>
+                <?php if (in_array($currentUser['role'] ?? null, ['admin', 'editor'], true)): ?>
+                    <a href="<?= BasePath::url('/admin/providers') ?>">Manage Circuit Providers</a>
+                    <a href="<?= BasePath::url('/admin/locations') ?>">Manage Locations</a>
+                <?php endif; ?>
                 <?php if (($currentUser['role'] ?? null) === 'admin'): ?>
                     <a href="<?= BasePath::url('/admin/users') ?>">Admin</a>
                 <?php endif; ?>

@@ -36,9 +36,6 @@ use CircuitMap\Support\View;
                 <?php endforeach; ?>
             </select>
         </label>
-        <?php if (in_array($currentUser['role'] ?? null, ['admin', 'editor'], true)): ?>
-            <p class="hint"><a href="<?= BasePath::url('/admin/providers') ?>">Manage circuit providers</a></p>
-        <?php endif; ?>
         <label>
             A-Location
             <select name="a_location_id">
@@ -57,9 +54,6 @@ use CircuitMap\Support\View;
                 <?php endforeach; ?>
             </select>
         </label>
-        <?php if (in_array($currentUser['role'] ?? null, ['admin', 'editor'], true)): ?>
-            <p class="hint"><a href="<?= BasePath::url('/admin/locations') ?>">Manage locations</a></p>
-        <?php endif; ?>
         <label>
             Circuit ID
             <input type="text" name="provider_circuit_id" maxlength="200">

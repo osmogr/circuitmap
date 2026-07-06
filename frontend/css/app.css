@@ -27,6 +27,12 @@ body {
     font-weight: 600;
 }
 
+.site-header nav {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
 .nav-logout-form {
     display: inline;
 }
@@ -100,7 +106,8 @@ main:has(.edit-page) {
 }
 
 .edit-sidebar .hint,
-.admin-page .hint {
+.admin-page .hint,
+.report-page .hint {
     font-size: 0.85rem;
     color: #555;
 }
@@ -218,6 +225,80 @@ main:has(.edit-page) {
     border-top: 1px solid #ddd;
     font-size: 0.85rem;
     color: #444;
+}
+
+.report-filters {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.report-filters label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    color: #555;
+}
+
+.report-filters select,
+.report-filters input {
+    padding: 0.35rem;
+    min-width: 180px;
+}
+
+.report-filters button {
+    padding: 0.4rem 0.8rem;
+    cursor: pointer;
+}
+
+.report-count {
+    font-size: 0.85rem;
+    color: #555;
+}
+
+.report-table-wrap {
+    overflow-x: auto;
+}
+
+.report-page table {
+    border-collapse: collapse;
+    width: 100%;
+    background: #fff;
+}
+
+.report-page th,
+.report-page td {
+    border: 1px solid #ddd;
+    padding: 0.4rem 0.6rem;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.report-page th[data-sort] {
+    cursor: pointer;
+    user-select: none;
+    background: #f0f0f0;
+}
+
+.report-page th[data-sort]:hover {
+    background: #e4e4e4;
+}
+
+.report-page th.sorted-asc::after {
+    content: " \25B2";
+    font-size: 0.7rem;
+}
+
+.report-page th.sorted-desc::after {
+    content: " \25BC";
+    font-size: 0.7rem;
+}
+
+.report-page .status-dot {
+    margin-left: 0;
 }
 
 .location-marker {

@@ -44,7 +44,10 @@
 
     function popupHtml(feature, circuit) {
         var props = feature.properties || {};
-        var name = props.name ? String(props.name) : '(unnamed)';
+        var name = circuit && circuit.name
+            ? String(circuit.name)
+            : (props.name ? String(props.name) : '(unnamed)');
+        var featureName = props.name && String(props.name) !== name ? String(props.name) : null;
         var description = props.description ? String(props.description) : '';
         var box = document.createElement('div');
         var title = document.createElement('strong');
@@ -62,7 +65,7 @@
             var meta = document.createElement('div');
             meta.className = 'circuit-popup-meta';
             [
-                metaRow('Circuit', circuit.name),
+                metaRow('Feature', featureName),
                 metaRow('ID', circuit.uuid),
                 metaRow('A-Location', circuit.a_location_name),
                 metaRow('Z-Location', circuit.z_location_name),

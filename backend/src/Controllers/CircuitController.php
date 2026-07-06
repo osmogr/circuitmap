@@ -248,6 +248,21 @@ final class CircuitController
         return (new SlimResponse())->withHeader('Location', BasePath::url('/'))->withStatus(302);
     }
 
+    public function showReport(Request $request, Response $response): Response
+    {
+        $currentUser = $this->auth->currentUser();
+        $html = View::render('layout', [
+            'title' => 'All Circuits',
+            'csrfToken' => $this->csrf->getToken(),
+            'currentUser' => $currentUser,
+            'content' => View::render('report', [
+                'currentUser' => $currentUser,
+            ]),
+        ]);
+        $response->getBody()->write($html);
+        return $response->withHeader('Content-Type', 'text/html; charset=utf-8');
+    }
+
     public function listJson(Request $request, Response $response): Response
     {
         $circuits = array_map(

@@ -166,6 +166,7 @@
             row.appendChild(textCell(circuit.a_location_name));
             row.appendChild(textCell(circuit.z_location_name));
             row.appendChild(textCell(circuit.order_number));
+            row.appendChild(textCell(Number(circuit.redundant) === 1 ? 'Yes' : 'No'));
 
             tableBody.appendChild(row);
         });

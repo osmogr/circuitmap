@@ -37,6 +37,7 @@ use CircuitMap\Support\BasePath;
                     <th data-sort="a_location_name">A-Location</th>
                     <th data-sort="z_location_name">Z-Location</th>
                     <th data-sort="order_number">Order Number</th>
+                    <th data-sort="redundant">Redundant</th>
                 </tr>
             </thead>
             <tbody id="report-table-body"></tbody>

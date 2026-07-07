@@ -30,6 +30,8 @@ use CircuitMap\Support\View;
                 <?php endif; ?>
                 <?php if (($currentUser['role'] ?? null) === 'admin'): ?>
                     <a href="<?= BasePath::url('/admin/users') ?>">Admin</a>
+                    <a href="<?= BasePath::url('/admin/export/circuits.kml') ?>" download>Export KML</a>
+                    <a href="<?= BasePath::url('/admin/export/circuits.kmz') ?>" download>Export KMZ</a>
                 <?php endif; ?>
                 <span class="nav-user"><?= View::escape($currentUser['username']) ?></span>
                 <form method="post" action="<?= BasePath::url('/logout') ?>" class="nav-logout-form">

@@ -6,6 +6,7 @@ namespace CircuitMap\Routes;
 
 use CircuitMap\Controllers\AdminController;
 use CircuitMap\Controllers\CircuitProviderController;
+use CircuitMap\Controllers\ExportController;
 use CircuitMap\Controllers\LocationController;
 use CircuitMap\Middleware\AuthGateMiddleware;
 use CircuitMap\Middleware\CsrfMiddleware;
@@ -27,6 +28,8 @@ final class AdminRoutes
         $providerController = $services['circuitProviderController'];
         /** @var LocationController $locationController */
         $locationController = $services['locationController'];
+        /** @var ExportController $exportController */
+        $exportController = $services['exportController'];
         /** @var AuthGateMiddleware $authGate */
         $authGate = $services['authGateMiddleware'];
         /** @var CsrfMiddleware $csrfMiddleware */
@@ -49,6 +52,9 @@ final class AdminRoutes
             ->add($adminOnly)->add($authGate)->add($csrfMiddleware);
 
         $app->get('/admin/audit-log', [$controller, 'showAuditLog'])->add($adminOnly)->add($authGate);
+
+        $app->get('/admin/export/circuits.{format:kml|kmz}', [$exportController, 'exportCircuits'])
+            ->add($adminOnly)->add($authGate);
 
         $app->get('/admin/providers', [$providerController, 'showProviders'])->add($editorOrAdmin)->add($authGate);
 

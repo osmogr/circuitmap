@@ -9,6 +9,7 @@ use CircuitMap\Controllers\AuthController;
 use CircuitMap\Controllers\CircuitController;
 use CircuitMap\Controllers\CircuitProviderController;
 use CircuitMap\Controllers\EditController;
+use CircuitMap\Controllers\ExportController;
 use CircuitMap\Controllers\LocationController;
 use CircuitMap\Controllers\StatusController;
 use CircuitMap\Middleware\AuthGateMiddleware;
@@ -27,6 +28,7 @@ use CircuitMap\Routes\CircuitRoutes;
 use CircuitMap\Services\Auth\AuthService;
 use CircuitMap\Services\Auth\CsrfService;
 use CircuitMap\Services\Kml\GeoJsonConverter;
+use CircuitMap\Services\Kml\KmlExportService;
 use CircuitMap\Services\Kml\KmlParser;
 use CircuitMap\Services\Kml\KmlSanitizer;
 use CircuitMap\Services\Kml\KmlValidator;
@@ -122,6 +124,7 @@ final class App
         $sanitizer = new KmlSanitizer();
         $geoJsonConverter = new GeoJsonConverter();
         $kmzExtractor = new KmzExtractor();
+        $kmlExportService = new KmlExportService($circuits, $storage, $parser);
         // StatusProviderInterface binding: swap this for a future polling
         // or webhook-based adapter without touching StatusController.
         $statusProvider = new ManualStatusProvider($circuits);
@@ -166,6 +169,7 @@ final class App
             ),
             'statusController' => new StatusController($circuits, $auditLog, $statusProvider),
             'adminController' => new AdminController($users, $auditLog, $csrf),
+            'exportController' => new ExportController($kmlExportService, $auditLog),
             'circuitProviderController' => new CircuitProviderController($circuitProviders, $auditLog, $csrf),
             'locationController' => new LocationController($locations, $auditLog, $csrf, $geocodingService),
             'editController' => new EditController(

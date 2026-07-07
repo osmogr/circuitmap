@@ -46,6 +46,12 @@ final class CircuitRoutes
             ->add($csrfMiddleware)
             ->add(new RateLimitMiddleware($rateLimiter, 'upload', 3600, 20, 'user'));
 
+        $app->post('/upload/confirm-split', [$controller, 'confirmSplit'])
+            ->add($editorOrAdmin)
+            ->add($authGate)
+            ->add($csrfMiddleware)
+            ->add(new RateLimitMiddleware($rateLimiter, 'upload', 3600, 20, 'user'));
+
         $app->get('/circuits/new', [$controller, 'showNewForm'])->add($editorOrAdmin)->add($authGate);
 
         $app->post('/circuits/new', [$controller, 'createBlank'])

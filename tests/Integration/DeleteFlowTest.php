@@ -5,18 +5,7 @@ declare(strict_types=1);
 namespace CircuitMap\Tests\Integration;
 
 use CircuitMap\Controllers\CircuitController;
-use CircuitMap\Models\AuditLogRepository;
-use CircuitMap\Models\CircuitProviderRepository;
 use CircuitMap\Models\CircuitRepository;
-use CircuitMap\Models\LocationRepository;
-use CircuitMap\Models\UserRepository;
-use CircuitMap\Services\Auth\AuthService;
-use CircuitMap\Services\Auth\CsrfService;
-use CircuitMap\Services\Kml\GeoJsonConverter;
-use CircuitMap\Services\Kml\KmlParser;
-use CircuitMap\Services\Kml\KmlSanitizer;
-use CircuitMap\Services\Kml\KmlValidator;
-use CircuitMap\Services\Kml\KmzExtractor;
 use CircuitMap\Services\Storage\FileStorageService;
 use CircuitMap\Support\Uuid;
 use CircuitMap\Tests\Support\DatabaseTestCase;
@@ -38,22 +27,7 @@ final class DeleteFlowTest extends DatabaseTestCase
         $this->ownerId = $this->createUser('owner');
         $this->otherUserId = $this->createUser('other');
         $this->circuits = new CircuitRepository($this->pdo);
-        $auth = new AuthService(new UserRepository($this->pdo));
-
-        $this->controller = new CircuitController(
-            $auth,
-            new CsrfService(),
-            $this->circuits,
-            new CircuitProviderRepository($this->pdo),
-            new LocationRepository($this->pdo),
-            new AuditLogRepository($this->pdo),
-            new FileStorageService($this->storagePath),
-            new KmlParser(),
-            new KmlValidator(),
-            new KmlSanitizer(),
-            new GeoJsonConverter(),
-            new KmzExtractor()
-        );
+        $this->controller = $this->makeCircuitController();
 
         $storage = new FileStorageService($this->storagePath);
         $this->uuid = Uuid::v4();

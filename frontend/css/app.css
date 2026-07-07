@@ -312,3 +312,51 @@ main:has(.edit-page) {
     line-height: 1;
     filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5));
 }
+
+.split-page {
+    max-width: 900px;
+}
+
+.split-page .split-table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 1.5rem;
+}
+
+.split-page .split-table th,
+.split-page .split-table td {
+    border: 1px solid #ddd;
+    padding: 0.4rem 0.6rem;
+    text-align: left;
+}
+
+.split-page .split-table input[type="text"] {
+    width: 100%;
+    padding: 0.4rem;
+    box-sizing: border-box;
+}
+
+.split-page .split-row-disabled td {
+    color: #999;
+}
+
+.split-page .split-shared dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.25rem 1rem;
+    margin: 0.5rem 0 1.5rem;
+}
+
+.split-page .split-shared dt {
+    font-weight: 600;
+}
+
+.split-page .split-shared dd {
+    margin: 0;
+}
+
+.split-page .split-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}

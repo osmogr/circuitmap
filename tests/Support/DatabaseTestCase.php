@@ -4,6 +4,22 @@ declare(strict_types=1);
 
 namespace CircuitMap\Tests\Support;
 
+use CircuitMap\Controllers\CircuitController;
+use CircuitMap\Models\AuditLogRepository;
+use CircuitMap\Models\CircuitProviderRepository;
+use CircuitMap\Models\CircuitRepository;
+use CircuitMap\Models\LocationRepository;
+use CircuitMap\Models\UserRepository;
+use CircuitMap\Services\Auth\AuthService;
+use CircuitMap\Services\Auth\CsrfService;
+use CircuitMap\Services\Kml\GeoJsonConverter;
+use CircuitMap\Services\Kml\KmlFolderSplitter;
+use CircuitMap\Services\Kml\KmlParser;
+use CircuitMap\Services\Kml\KmlSanitizer;
+use CircuitMap\Services\Kml\KmlValidator;
+use CircuitMap\Services\Kml\KmzExtractor;
+use CircuitMap\Services\Storage\FileStorageService;
+use CircuitMap\Services\Storage\PendingImportStorage;
 use CircuitMap\Support\Database;
 use CircuitMap\Support\View;
 use PDO;
@@ -57,6 +73,31 @@ abstract class DatabaseTestCase extends TestCase
             is_dir($path) ? $this->removeDirectory($path) : unlink($path);
         }
         rmdir($dir);
+    }
+
+    /**
+     * Real controller with real dependencies against the test DB and
+     * storage — the wiring mirror of App::buildServices().
+     */
+    protected function makeCircuitController(): CircuitController
+    {
+        return new CircuitController(
+            $this->pdo,
+            new AuthService(new UserRepository($this->pdo)),
+            new CsrfService(),
+            new CircuitRepository($this->pdo),
+            new CircuitProviderRepository($this->pdo),
+            new LocationRepository($this->pdo),
+            new AuditLogRepository($this->pdo),
+            new FileStorageService($this->storagePath),
+            new KmlParser(),
+            new KmlValidator(),
+            new KmlSanitizer(),
+            new GeoJsonConverter(),
+            new KmzExtractor(),
+            new KmlFolderSplitter(),
+            new PendingImportStorage($this->storagePath)
+        );
     }
 
     protected function createUser(string $username = 'testuser', string $role = 'editor'): int

@@ -11,12 +11,14 @@ use CircuitMap\Models\LocationRepository;
 use CircuitMap\Services\Auth\AuthService;
 use CircuitMap\Services\Auth\CsrfService;
 use CircuitMap\Services\Kml\GeoJsonConverter;
+use CircuitMap\Services\Kml\KmlFolderSplitter;
 use CircuitMap\Services\Kml\KmlParseException;
 use CircuitMap\Services\Kml\KmlParser;
 use CircuitMap\Services\Kml\KmlSanitizer;
 use CircuitMap\Services\Kml\KmlValidator;
 use CircuitMap\Services\Kml\KmzExtractor;
 use CircuitMap\Services\Storage\FileStorageService;
+use CircuitMap\Services\Storage\PendingImportStorage;
 use CircuitMap\Support\BasePath;
 use CircuitMap\Support\CircuitAuthorization;
 use CircuitMap\Support\ClientIp;
@@ -46,6 +48,7 @@ final class CircuitController
     ];
 
     public function __construct(
+        private readonly \PDO $pdo,
         private readonly AuthService $auth,
         private readonly CsrfService $csrf,
         private readonly CircuitRepository $circuits,
@@ -57,7 +60,9 @@ final class CircuitController
         private readonly KmlValidator $validator,
         private readonly KmlSanitizer $sanitizer,
         private readonly GeoJsonConverter $geoJsonConverter,
-        private readonly KmzExtractor $kmzExtractor
+        private readonly KmzExtractor $kmzExtractor,
+        private readonly KmlFolderSplitter $folderSplitter,
+        private readonly PendingImportStorage $pendingImports
     ) {
     }
 
@@ -218,6 +223,22 @@ final class CircuitController
             return $this->renderUploadError($response, $e->getMessage(), 422);
         }
 
+        if ($this->folderSplitter->isSplittable($dom)) {
+            return $this->renderSplitPreview($response, $dom, [
+                'user_id' => (int) $currentUser['id'],
+                'name' => $name,
+                'description' => $description,
+                'tags' => $tags,
+                'provider_id' => $providerId,
+                'provider_circuit_id' => $providerCircuitId === '' ? null : $providerCircuitId,
+                'order_number' => $orderNumber === '' ? null : $orderNumber,
+                'redundant' => $redundant,
+                'a_location_id' => $aLocationId,
+                'z_location_id' => $zLocationId,
+                'original_filename' => (string) $file->getClientFilename(),
+            ]);
+        }
+
         $normalizedXml = (string) $dom->saveXML();
         $uuid = Uuid::v4();
         $relativePath = $this->storage->saveNew($uuid, $normalizedXml);
@@ -327,6 +348,276 @@ final class CircuitController
         );
 
         return ResponseHelper::json(['status' => 'ok']);
+    }
+
+    /**
+     * Second step of a multi-folder import: the sanitized KML sits in
+     * pending storage under a server-generated token; this either creates
+     * one circuit per selected folder (all-or-nothing) or falls back to a
+     * plain single-circuit import of the whole file.
+     */
+    public function confirmSplit(Request $request, Response $response): Response
+    {
+        $currentUser = $request->getAttribute('currentUser');
+        $body = (array) $request->getParsedBody();
+        $token = is_string($body['pending_token'] ?? null) ? $body['pending_token'] : '';
+        $include = is_array($body['include'] ?? null) ? array_values(array_filter($body['include'], 'is_string')) : [];
+        $names = is_array($body['names'] ?? null) ? $body['names'] : [];
+
+        $pending = $this->pendingImports->read($token);
+        if ($pending === null || (int) ($pending['meta']['user_id'] ?? 0) !== (int) $currentUser['id']) {
+            return $this->renderUploadError(
+                $response,
+                'This import session has expired. Please upload the file again.',
+                410
+            );
+        }
+        $meta = $pending['meta'];
+
+        try {
+            $dom = $this->parser->parse($pending['kml']);
+        } catch (KmlParseException $e) {
+            return $this->renderUploadError($response, $e->getMessage(), 422);
+        }
+
+        // Providers/locations may have been deactivated since the preview.
+        [$providerId, $providerError] = $this->resolveProviderId((string) ($meta['provider_id'] ?? ''));
+        [$aLocationId, $aLocationError] = $this->resolveLocationId((string) ($meta['a_location_id'] ?? ''));
+        [$zLocationId, $zLocationError] = $this->resolveLocationId((string) ($meta['z_location_id'] ?? ''));
+        $resolveError = $providerError ?? $aLocationError ?? $zLocationError;
+        if ($resolveError !== null) {
+            return $this->renderSplitPage($response, $token, $meta, $resolveError, 422, $names, $include);
+        }
+
+        if (($body['mode'] ?? '') === 'single') {
+            $uuid = Uuid::v4();
+            $relativePath = $this->storage->saveNew($uuid, $pending['kml']);
+            $circuitId = $this->insertCircuitFromMeta($uuid, (string) $meta['name'], $relativePath, $meta, $providerId, $aLocationId, $zLocationId, (int) $currentUser['id']);
+            $this->auditLog->log((int) $currentUser['id'], 'upload', $circuitId, 'name=' . $meta['name'], ClientIp::from($request));
+            $this->pendingImports->delete($token);
+            return (new SlimResponse())->withHeader('Location', BasePath::url('/'))->withStatus(302);
+        }
+
+        $inventory = [];
+        foreach (($meta['folders'] ?? []) as $candidate) {
+            $inventory[(string) $candidate['key']] = $candidate;
+        }
+
+        // Phase 1: validate every selected folder before writing anything,
+        // so a bad folder cannot leave a partial import behind.
+        $toCreate = [];
+        foreach (array_unique($include) as $key) {
+            $candidate = $inventory[$key] ?? null;
+            if ($candidate === null) {
+                continue; // forged or stale key
+            }
+            $label = $this->candidateLabel($candidate);
+            $circuitName = trim((string) ($names[$key] ?? ''));
+            if ($circuitName === '' || mb_strlen($circuitName) > 200) {
+                return $this->renderSplitPage($response, $token, $meta, "Provide a circuit name (up to 200 characters) for \"{$label}\".", 422, $names, $include);
+            }
+            try {
+                $splitDom = $this->folderSplitter->extract($dom, $key);
+                $this->validator->validate($splitDom);
+            } catch (KmlParseException $e) {
+                return $this->renderSplitPage($response, $token, $meta, "\"{$label}\": {$e->getMessage()}", 422, $names, $include);
+            }
+            $toCreate[] = ['label' => $label, 'name' => $circuitName, 'xml' => (string) $splitDom->saveXML()];
+        }
+
+        if ($toCreate === []) {
+            return $this->renderSplitPage($response, $token, $meta, 'Select at least one folder to import.', 422, $names, $include);
+        }
+
+        // Phase 2: all rows in one transaction. A rollback leaves only
+        // orphaned circuits/{uuid}/ dirs, which nothing ever reads.
+        $created = [];
+        try {
+            $this->inTransaction(function () use ($toCreate, $meta, $providerId, $aLocationId, $zLocationId, $currentUser, &$created): void {
+                foreach ($toCreate as $item) {
+                    $uuid = Uuid::v4();
+                    $relativePath = $this->storage->saveNew($uuid, $item['xml']);
+                    $circuitId = $this->insertCircuitFromMeta($uuid, $item['name'], $relativePath, $meta, $providerId, $aLocationId, $zLocationId, (int) $currentUser['id']);
+                    $created[] = ['id' => $circuitId, 'name' => $item['name'], 'label' => $item['label']];
+                }
+            });
+        } catch (\Throwable) {
+            return $this->renderSplitPage($response, $token, $meta, 'Import failed; no circuits were created.', 500, $names, $include);
+        }
+
+        foreach ($created as $circuit) {
+            $this->auditLog->log(
+                (int) $currentUser['id'],
+                'upload',
+                (int) $circuit['id'],
+                "name={$circuit['name']} split_folder={$circuit['label']}",
+                ClientIp::from($request)
+            );
+        }
+        $this->pendingImports->delete($token);
+
+        return (new SlimResponse())->withHeader('Location', BasePath::url('/'))->withStatus(302);
+    }
+
+    /**
+     * @param array<string, mixed> $meta
+     */
+    private function insertCircuitFromMeta(
+        string $uuid,
+        string $name,
+        string $relativePath,
+        array $meta,
+        ?int $providerId,
+        ?int $aLocationId,
+        ?int $zLocationId,
+        int $ownerId
+    ): int {
+        return $this->circuits->insert(
+            $uuid,
+            $name,
+            isset($meta['description']) ? (string) $meta['description'] : null,
+            isset($meta['tags']) ? (string) $meta['tags'] : null,
+            $ownerId,
+            $relativePath,
+            $providerId,
+            isset($meta['provider_circuit_id']) ? (string) $meta['provider_circuit_id'] : null,
+            isset($meta['order_number']) ? (string) $meta['order_number'] : null,
+            (bool) ($meta['redundant'] ?? false),
+            $aLocationId,
+            $zLocationId
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $meta shared form fields; folder inventory is added here
+     */
+    private function renderSplitPreview(Response $response, \DOMDocument $dom, array $meta): Response
+    {
+        $meta['folders'] = $this->folderSplitter->enumerate($dom);
+        $token = $this->pendingImports->save((string) $dom->saveXML(), $meta);
+        return $this->renderSplitPage($response, $token, $meta, null, 200);
+    }
+
+    /**
+     * Renders the folder-selection page, preserving the user's edits when
+     * re-rendering after a confirm-time validation error.
+     *
+     * @param array<string, mixed> $meta
+     * @param array<mixed> $submittedNames names[<key>] from the confirm request
+     * @param array<int, string>|null $submittedIncludes include[] from the confirm request; null on first render
+     */
+    private function renderSplitPage(
+        Response $response,
+        string $token,
+        array $meta,
+        ?string $error,
+        int $status,
+        array $submittedNames = [],
+        ?array $submittedIncludes = null
+    ): Response {
+        $originalName = (string) ($meta['name'] ?? '');
+
+        $rows = [];
+        foreach (($meta['folders'] ?? []) as $index => $candidate) {
+            $key = (string) $candidate['key'];
+            $empty = (int) $candidate['placemarkCount'] === 0;
+            $default = $key === KmlFolderSplitter::UNGROUPED_KEY
+                ? "{$originalName} (ungrouped)"
+                : ((string) $candidate['name'] !== '' ? (string) $candidate['name'] : sprintf('%s - Folder %d', $originalName, $index + 1));
+            $rows[] = [
+                'key' => $key,
+                'label' => $this->candidateLabel($candidate),
+                'placemarkCount' => (int) $candidate['placemarkCount'],
+                'value' => isset($submittedNames[$key]) ? (string) $submittedNames[$key] : $default,
+                'included' => !$empty && ($submittedIncludes === null || in_array($key, $submittedIncludes, true)),
+                'disabled' => $empty,
+            ];
+        }
+
+        $currentUser = $this->auth->currentUser();
+        $html = View::render('layout', [
+            'title' => 'Split circuits',
+            'csrfToken' => $this->csrf->getToken(),
+            'currentUser' => $currentUser,
+            'content' => View::render('split', [
+                'csrfToken' => $this->csrf->getToken(),
+                'currentUser' => $currentUser,
+                'token' => $token,
+                'rows' => $rows,
+                'shared' => $this->sharedMetaSummary($meta),
+                'originalName' => $originalName,
+                'originalFilename' => (string) ($meta['original_filename'] ?? ''),
+                'error' => $error,
+            ]),
+        ]);
+        $response->getBody()->write($html);
+        return $response->withHeader('Content-Type', 'text/html; charset=utf-8')->withStatus($status);
+    }
+
+    /**
+     * @param array<string, mixed> $candidate
+     */
+    private function candidateLabel(array $candidate): string
+    {
+        if ((string) $candidate['key'] === KmlFolderSplitter::UNGROUPED_KEY) {
+            return 'Ungrouped placemarks';
+        }
+        return (string) $candidate['name'] !== '' ? (string) $candidate['name'] : '(unnamed folder)';
+    }
+
+    /**
+     * Display strings for the "applied to every circuit" summary box,
+     * empty fields omitted.
+     *
+     * @param array<string, mixed> $meta
+     * @return array<string, string>
+     */
+    private function sharedMetaSummary(array $meta): array
+    {
+        $providerName = '';
+        if (isset($meta['provider_id']) && $meta['provider_id'] !== null) {
+            $provider = $this->providers->findById((int) $meta['provider_id']);
+            $providerName = $provider !== null ? (string) $provider['name'] : '';
+        }
+        $locationName = function ($id): string {
+            if ($id === null) {
+                return '';
+            }
+            $location = $this->locations->findById((int) $id);
+            return $location !== null ? (string) $location['name'] : '';
+        };
+
+        $fields = [
+            'Description' => (string) ($meta['description'] ?? ''),
+            'Tags' => (string) ($meta['tags'] ?? ''),
+            'Circuit Provider' => $providerName,
+            'A-Location' => $locationName($meta['a_location_id'] ?? null),
+            'Z-Location' => $locationName($meta['z_location_id'] ?? null),
+            'Circuit ID' => (string) ($meta['provider_circuit_id'] ?? ''),
+            'Order Number' => (string) ($meta['order_number'] ?? ''),
+            'Redundant' => ($meta['redundant'] ?? false) ? 'Yes' : '',
+        ];
+        return array_filter($fields, static fn (string $value): bool => $value !== '');
+    }
+
+    /**
+     * Runs $work inside a single database transaction, rolling back and
+     * re-throwing if it raises. Filesystem writes inside $work are not
+     * transactional; callers order them so a rollback leaves only benign
+     * artifacts (see EditController::update()).
+     */
+    private function inTransaction(callable $work): void
+    {
+        $this->pdo->beginTransaction();
+        try {
+            $work();
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
     }
 
     /**

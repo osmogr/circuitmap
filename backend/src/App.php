@@ -29,6 +29,7 @@ use CircuitMap\Services\Auth\AuthService;
 use CircuitMap\Services\Auth\CsrfService;
 use CircuitMap\Services\Kml\GeoJsonConverter;
 use CircuitMap\Services\Kml\KmlExportService;
+use CircuitMap\Services\Kml\KmlFolderSplitter;
 use CircuitMap\Services\Kml\KmlParser;
 use CircuitMap\Services\Kml\KmlSanitizer;
 use CircuitMap\Services\Kml\KmlValidator;
@@ -37,6 +38,7 @@ use CircuitMap\Services\Geocoding\NominatimGeocodingService;
 use CircuitMap\Services\RateLimit\RateLimiterService;
 use CircuitMap\Services\Status\ManualStatusProvider;
 use CircuitMap\Services\Storage\FileStorageService;
+use CircuitMap\Services\Storage\PendingImportStorage;
 use CircuitMap\Support\BasePath;
 use CircuitMap\Support\Database;
 use CircuitMap\Support\Asset;
@@ -124,6 +126,8 @@ final class App
         $sanitizer = new KmlSanitizer();
         $geoJsonConverter = new GeoJsonConverter();
         $kmzExtractor = new KmzExtractor();
+        $folderSplitter = new KmlFolderSplitter();
+        $pendingImports = new PendingImportStorage($storagePath);
         $kmlExportService = new KmlExportService($circuits, $storage, $parser);
         // StatusProviderInterface binding: swap this for a future polling
         // or webhook-based adapter without touching StatusController.
@@ -154,6 +158,7 @@ final class App
             'csrfMiddleware' => $csrfMiddleware,
             'authController' => new AuthController($auth, $csrf, $auditLog),
             'circuitController' => new CircuitController(
+                $pdo,
                 $auth,
                 $csrf,
                 $circuits,
@@ -165,7 +170,9 @@ final class App
                 $validator,
                 $sanitizer,
                 $geoJsonConverter,
-                $kmzExtractor
+                $kmzExtractor,
+                $folderSplitter,
+                $pendingImports
             ),
             'statusController' => new StatusController($circuits, $auditLog, $statusProvider),
             'adminController' => new AdminController($users, $auditLog, $csrf),

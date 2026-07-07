@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Provider Handoff Bundle</name>
+    <Style id="line-red">
+      <LineStyle>
+        <color>ff0000ff</color>
+        <width>4</width>
+      </LineStyle>
+    </Style>
+    <Folder>
+      <name>Circuit Alpha</name>
+      <Placemark>
+        <name>Alpha Segment 1</name>
+        <styleUrl>#line-red</styleUrl>
+        <LineString>
+          <coordinates>-122.4194,37.7749,0 -122.4089,37.7833,0</coordinates>
+        </LineString>
+      </Placemark>
+      <Placemark>
+        <name>Alpha Hut</name>
+        <Point>
+          <coordinates>-122.4194,37.7749,0</coordinates>
+        </Point>
+      </Placemark>
+      <Folder>
+        <name>Alpha Laterals</name>
+        <Placemark>
+          <name>Alpha Lateral 1</name>
+          <LineString>
+            <coordinates>-122.41,37.78 -122.42,37.79</coordinates>
+          </LineString>
+        </Placemark>
+      </Folder>
+    </Folder>
+    <Folder>
+      <name>Circuit Beta</name>
+      <Placemark>
+        <name>Beta Segment 1</name>
+        <LineString>
+          <coordinates>-121.8863,37.3382,0 -121.9,37.35,0</coordinates>
+        </LineString>
+      </Placemark>
+    </Folder>
+    <Folder>
+      <name>Empty Folder</name>
+    </Folder>
+    <Placemark>
+      <name>Loose Handhole</name>
+      <Point>
+        <coordinates>-122.0,37.5,0</coordinates>
+      </Point>
+    </Placemark>
+  </Document>
+</kml>

@@ -4,19 +4,9 @@ declare(strict_types=1);
 
 namespace CircuitMap\Tests\Integration;
 
-use CircuitMap\Models\AuditLogRepository;
 use CircuitMap\Models\CircuitProviderRepository;
 use CircuitMap\Models\CircuitRepository;
 use CircuitMap\Models\LocationRepository;
-use CircuitMap\Models\UserRepository;
-use CircuitMap\Services\Auth\AuthService;
-use CircuitMap\Services\Auth\CsrfService;
-use CircuitMap\Services\Kml\GeoJsonConverter;
-use CircuitMap\Services\Kml\KmlParser;
-use CircuitMap\Services\Kml\KmlSanitizer;
-use CircuitMap\Services\Kml\KmlValidator;
-use CircuitMap\Services\Kml\KmzExtractor;
-use CircuitMap\Services\Storage\FileStorageService;
 use CircuitMap\Controllers\CircuitController;
 use CircuitMap\Tests\Support\DatabaseTestCase;
 use Slim\Psr7\Factory\ResponseFactory;
@@ -43,21 +33,7 @@ final class NewCircuitFlowTest extends DatabaseTestCase
         $this->circuits = new CircuitRepository($this->pdo);
         $this->providers = new CircuitProviderRepository($this->pdo);
         $this->locations = new LocationRepository($this->pdo);
-
-        $this->controller = new CircuitController(
-            new AuthService(new UserRepository($this->pdo)),
-            new CsrfService(),
-            $this->circuits,
-            $this->providers,
-            $this->locations,
-            new AuditLogRepository($this->pdo),
-            new FileStorageService($this->storagePath),
-            new KmlParser(),
-            new KmlValidator(),
-            new KmlSanitizer(),
-            new GeoJsonConverter(),
-            new KmzExtractor()
-        );
+        $this->controller = $this->makeCircuitController();
     }
 
     private function requestWithBody(array $formFields)

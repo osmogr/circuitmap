@@ -14,14 +14,13 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 /**
- * Manual status setting is the one working example of the deferred status
- * integration point: a user picks a value from a dropdown, it is stored
- * directly on the circuit row via CircuitRepository::updateStatus, and
- * status_source is recorded as "manual". A future polling/webhook adapter
- * would call the same repository method with a different source label,
- * and would be wired in by swapping the StatusProviderInterface binding
- * constructed in App.php (currently ManualStatusProvider) for the new
- * adapter; getStatus() below does not otherwise change.
+ * Manual status setting: a user picks a value from a dropdown and it is
+ * stored on the circuit row via CircuitRepository::updateStatus with
+ * status_source "manual". Circuits mapped to a Cacti device (cacti_host_id
+ * set) also accept manual writes, but the Cacti poller
+ * (bin/poll_cacti.php) overwrites them on its next pass — for mapped
+ * circuits Cacti is authoritative. getStatus() reads whichever source
+ * wrote last, via the StatusProviderInterface binding in App.php.
  */
 final class StatusController
 {

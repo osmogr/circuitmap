@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace CircuitMap\Services\Status;
 
 /**
- * Contract for a real-time status data source. This pass only ships
- * ManualStatusProvider (reads/writes the manually-set status stored on the
- * circuit row); no polling loop, webhook receiver, or vendor API client is
- * implemented yet. A future adapter (see README) would implement this
- * interface and be wired in wherever ManualStatusProvider is constructed
- * today, without any change to the map/API code that consumes StatusResult.
+ * Contract for reading a circuit's current status. ManualStatusProvider
+ * (the bound implementation) reads the status stored on the circuit row,
+ * which is written either by a user via the edit UI (source "manual") or
+ * by the Cacti poller, bin/poll_cacti.php (source "cacti"). An adapter
+ * that queries an external system live at request time would implement
+ * this interface and be wired in wherever ManualStatusProvider is
+ * constructed today, without any change to the consumers of StatusResult.
  */
 interface StatusProviderInterface
 {

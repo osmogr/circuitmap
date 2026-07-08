@@ -227,6 +227,35 @@ main:has(.edit-page) {
     color: #444;
 }
 
+.location-popup-circuits ul {
+    list-style: none;
+    margin: 0.25rem 0 0;
+    padding: 0;
+}
+
+.location-popup-circuit {
+    background: none;
+    border: none;
+    padding: 0.15rem 0;
+    font: inherit;
+    font-size: 0.85rem;
+    color: #1d4ed8;
+    cursor: pointer;
+}
+
+.location-popup-circuit:hover {
+    text-decoration: underline;
+}
+
+.location-popup-circuit-status {
+    color: #888;
+}
+
+.location-popup-no-circuits {
+    color: #888;
+    font-style: italic;
+}
+
 .report-filters {
     display: flex;
     align-items: flex-end;

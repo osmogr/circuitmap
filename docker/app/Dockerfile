@@ -13,7 +13,7 @@ RUN apt-get update \
         unzip \
         curl \
         gettext-base \
-    && docker-php-ext-install -j"$(nproc)" pdo_sqlite zip \
+    && docker-php-ext-install -j"$(nproc)" pdo_sqlite pdo_mysql zip \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

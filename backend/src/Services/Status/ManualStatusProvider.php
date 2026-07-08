@@ -7,12 +7,11 @@ namespace CircuitMap\Services\Status;
 use CircuitMap\Models\CircuitRepository;
 
 /**
- * The working example adapter: status is whatever a user last set via the
- * UI (CircuitRepository::updateStatus), stored directly on the circuit
- * row. A future polling or webhook-based adapter would instead query an
- * external system here and would typically also need a scheduler or
- * webhook route to call CircuitRepository::updateStatus on a timer/event,
- * neither of which exists yet.
+ * Reads the status stored on the circuit row. Despite the name this now
+ * serves two write paths: users setting status via the UI (source
+ * "manual") and the supervisord-run Cacti poller (bin/poll_cacti.php,
+ * source "cacti"), which overwrites status on every poll for circuits
+ * that have a cacti_host_id mapping.
  */
 final class ManualStatusProvider implements StatusProviderInterface
 {

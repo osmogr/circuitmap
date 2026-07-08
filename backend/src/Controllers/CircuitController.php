@@ -289,6 +289,16 @@ final class CircuitController
         $circuits = array_map(
             static function (array $circuit): array {
                 $circuit['statusColor'] = StatusColor::forStatus($circuit['status'] ?? null);
+                // Derived server-side (like statusColor) so every consumer
+                // agrees on the definition: the busier of the two directions
+                // against the provisioned capacity.
+                $capacity = (int) ($circuit['capacity_bps'] ?? 0);
+                $hasUsage = ($circuit['usage_in_bps'] ?? null) !== null
+                    || ($circuit['usage_out_bps'] ?? null) !== null;
+                $peak = max((int) ($circuit['usage_in_bps'] ?? 0), (int) ($circuit['usage_out_bps'] ?? 0));
+                $circuit['utilizationPct'] = ($capacity > 0 && $hasUsage)
+                    ? round($peak / $capacity * 100, 1)
+                    : null;
                 return $circuit;
             },
             $this->circuits->listVisible()

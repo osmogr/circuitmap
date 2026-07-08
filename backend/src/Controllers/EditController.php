@@ -128,6 +128,22 @@ final class EditController
             }
         }
 
+        [$cactiHostId, $cactiHostError] = $this->parsePositiveInt($body['cacti_host_id'] ?? null, 'Cacti device ID');
+        if ($cactiHostError !== null) {
+            return ResponseHelper::json(['error' => $cactiHostError], 422);
+        }
+        [$cactiLocalDataId, $cactiDataError] = $this->parsePositiveInt(
+            $body['cacti_local_data_id'] ?? null,
+            'Cacti data source ID'
+        );
+        if ($cactiDataError !== null) {
+            return ResponseHelper::json(['error' => $cactiDataError], 422);
+        }
+        [$capacityBps, $capacityError] = $this->parsePositiveInt($body['capacity_bps'] ?? null, 'Capacity');
+        if ($capacityError !== null) {
+            return ResponseHelper::json(['error' => $capacityError], 422);
+        }
+
         [$aLocationId, $aLocationError] = $this->resolveLocationId(
             $body['a_location_id'] ?? null,
             $circuit['a_location_id'] ?? null,
@@ -177,7 +193,8 @@ final class EditController
             $this->inTransaction(function () use (
                 $circuit, $oldVersionNumber, $uuid, $name, $description, $tags,
                 $newVersionNumber, $providerId, $providerCircuitId, $orderNumber,
-                $redundant, $aLocationId, $zLocationId, $normalizedXml, $currentUser
+                $redundant, $aLocationId, $zLocationId, $cactiHostId, $cactiLocalDataId,
+                $capacityBps, $normalizedXml, $currentUser
             ): void {
                 $this->versions->insert(
                     (int) $circuit['id'],
@@ -198,7 +215,10 @@ final class EditController
                     $orderNumber === '' ? null : $orderNumber,
                     $redundant,
                     $aLocationId,
-                    $zLocationId
+                    $zLocationId,
+                    $cactiHostId,
+                    $cactiLocalDataId,
+                    $capacityBps
                 );
                 $this->storage->overwriteCurrent($uuid, $normalizedXml);
             });
@@ -351,6 +371,24 @@ final class EditController
         }
 
         return $providers;
+    }
+
+    /**
+     * Optional positive-integer form field: null/'' clears the value,
+     * anything else must be a whole number greater than zero.
+     *
+     * @param mixed $raw
+     * @return array{0: ?int, 1: ?string} [value, errorMessage]
+     */
+    private function parsePositiveInt($raw, string $label): array
+    {
+        if ($raw === null || $raw === '') {
+            return [null, null];
+        }
+        if ((is_int($raw) || (is_string($raw) && ctype_digit($raw))) && (int) $raw > 0) {
+            return [(int) $raw, null];
+        }
+        return [null, "{$label} must be a positive whole number."];
     }
 
     /**

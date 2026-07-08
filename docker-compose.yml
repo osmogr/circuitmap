@@ -23,6 +23,15 @@ services:
       PROXY_AUTH_HEADER: "${PROXY_AUTH_HEADER:-REMOTE_USER}"
       PROXY_AUTH_DEFAULT_ROLE: "${PROXY_AUTH_DEFAULT_ROLE:-readonly}"
       BASE_PATH: "${BASE_PATH:-}"
+      CACTI_DB_HOST: "${CACTI_DB_HOST:-}"
+      CACTI_DB_PORT: "${CACTI_DB_PORT:-3306}"
+      CACTI_DB_NAME: "${CACTI_DB_NAME:-cacti}"
+      CACTI_DB_USER: "${CACTI_DB_USER:-}"
+      CACTI_DB_PASSWORD: "${CACTI_DB_PASSWORD:-}"
+      CACTI_POLL_INTERVAL: "${CACTI_POLL_INTERVAL:-300}"
+      CACTI_STALE_AFTER: "${CACTI_STALE_AFTER:-900}"
+      CACTI_TRAFFIC_IN_NAME: "${CACTI_TRAFFIC_IN_NAME:-traffic_in}"
+      CACTI_TRAFFIC_OUT_NAME: "${CACTI_TRAFFIC_OUT_NAME:-traffic_out}"
     volumes:
       - kml-data:/var/lib/circuitmap/kml
       - db-data:/var/lib/circuitmap/db

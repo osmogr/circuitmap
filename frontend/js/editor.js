@@ -119,6 +119,13 @@
         var providerValue = document.getElementById('edit-provider').value;
         var aLocationValue = document.getElementById('edit-a-location').value;
         var zLocationValue = document.getElementById('edit-z-location').value;
+        var cactiHostValue = document.getElementById('edit-cacti-host-id').value.trim();
+        var cactiDataValue = document.getElementById('edit-cacti-data-id').value.trim();
+        var capacityMbpsValue = document.getElementById('edit-capacity-mbps').value.trim();
+        // The form takes Mbps for humans; the API stores bits/sec.
+        var capacityBps = capacityMbpsValue === '' || isNaN(parseFloat(capacityMbpsValue))
+            ? null
+            : Math.round(parseFloat(capacityMbpsValue) * 1000000);
 
         var payload = {
             name: document.getElementById('edit-name').value,
@@ -130,6 +137,9 @@
             redundant: document.getElementById('edit-redundant').value,
             a_location_id: aLocationValue === '' ? null : aLocationValue,
             z_location_id: zLocationValue === '' ? null : zLocationValue,
+            cacti_host_id: cactiHostValue === '' ? null : cactiHostValue,
+            cacti_local_data_id: cactiDataValue === '' ? null : cactiDataValue,
+            capacity_bps: capacityBps,
             geojson: collectFeatureCollection()
         };
 

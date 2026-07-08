@@ -233,6 +233,83 @@ final class EditFlowTest extends DatabaseTestCase
         $this->assertSame($zLocationId, (int) $circuit['z_location_id']);
     }
 
+    public function testCactiFieldsRoundTrip(): void
+    {
+        $payload = [
+            'name' => 'Updated Name',
+            'cacti_host_id' => '42',
+            'cacti_local_data_id' => 7,
+            'capacity_bps' => 100000000,
+            'geojson' => [
+                'type' => 'FeatureCollection',
+                'features' => [[
+                    'type' => 'Feature',
+                    'properties' => ['name' => 'Moved', 'description' => ''],
+                    'geometry' => ['type' => 'Point', 'coordinates' => [1.0, 2.0]],
+                ]],
+            ],
+        ];
+
+        $response = $this->controller->update(
+            $this->requestFor($this->ownerId, $payload),
+            (new ResponseFactory())->createResponse(),
+            ['uuid' => $this->uuid]
+        );
+
+        $this->assertSame(200, $response->getStatusCode());
+
+        $circuit = $this->circuits->findByUuid($this->uuid);
+        $this->assertSame(42, (int) $circuit['cacti_host_id']);
+        $this->assertSame(7, (int) $circuit['cacti_local_data_id']);
+        $this->assertSame(100000000, (int) $circuit['capacity_bps']);
+
+        // Saving again with the fields blank clears the mapping.
+        $payload['cacti_host_id'] = '';
+        $payload['cacti_local_data_id'] = null;
+        $payload['capacity_bps'] = null;
+        $response = $this->controller->update(
+            $this->requestFor($this->ownerId, $payload),
+            (new ResponseFactory())->createResponse(),
+            ['uuid' => $this->uuid]
+        );
+
+        $this->assertSame(200, $response->getStatusCode());
+        $circuit = $this->circuits->findByUuid($this->uuid);
+        $this->assertNull($circuit['cacti_host_id']);
+        $this->assertNull($circuit['cacti_local_data_id']);
+        $this->assertNull($circuit['capacity_bps']);
+    }
+
+    public function testInvalidCactiFieldValuesAreRejected(): void
+    {
+        foreach (['-5', 'abc', '0', 3.7] as $bad) {
+            $payload = [
+                'name' => 'Updated Name',
+                'cacti_host_id' => $bad,
+                'geojson' => [
+                    'type' => 'FeatureCollection',
+                    'features' => [[
+                        'type' => 'Feature',
+                        'properties' => ['name' => 'Moved', 'description' => ''],
+                        'geometry' => ['type' => 'Point', 'coordinates' => [1.0, 2.0]],
+                    ]],
+                ],
+            ];
+
+            $response = $this->controller->update(
+                $this->requestFor($this->ownerId, $payload),
+                (new ResponseFactory())->createResponse(),
+                ['uuid' => $this->uuid]
+            );
+
+            $this->assertSame(422, $response->getStatusCode(), 'value should be rejected: ' . var_export($bad, true));
+        }
+
+        $circuit = $this->circuits->findByUuid($this->uuid);
+        $this->assertNull($circuit['cacti_host_id']);
+        $this->assertSame('Original Name', $circuit['name'], 'rejected edit must have no side effects');
+    }
+
     public function testSwitchingToADeactivatedLocationIsRejected(): void
     {
         $locationId = $this->locations->insert('Main St DC', null, null);

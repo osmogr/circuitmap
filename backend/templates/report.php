@@ -38,6 +38,9 @@ use CircuitMap\Support\BasePath;
                     <th data-sort="z_location_name">Z-Location</th>
                     <th data-sort="order_number">Order Number</th>
                     <th data-sort="redundant">Redundant</th>
+                    <th data-sort="usage_in_bps">Util RX</th>
+                    <th data-sort="usage_out_bps">Util TX</th>
+                    <th data-sort="utilizationPct">Utilization</th>
                 </tr>
             </thead>
             <tbody id="report-table-body"></tbody>

@@ -330,6 +330,45 @@ main:has(.edit-page) {
     margin-left: 0;
 }
 
+.util-cell {
+    min-width: 140px;
+}
+
+.util-bar {
+    display: inline-block;
+    vertical-align: middle;
+    width: 90px;
+    height: 10px;
+    border-radius: 5px;
+    background: #e5e7eb;
+    overflow: hidden;
+}
+
+.util-bar-fill {
+    height: 100%;
+    border-radius: 5px;
+}
+
+/* Threshold colors match the StatusColor up/degraded/down palette. */
+.util-bar-fill.util-ok {
+    background: #16a34a;
+}
+
+.util-bar-fill.util-warn {
+    background: #d97706;
+}
+
+.util-bar-fill.util-crit {
+    background: #dc2626;
+}
+
+.util-label {
+    margin-left: 0.4rem;
+    font-size: 0.85rem;
+    color: #555;
+    vertical-align: middle;
+}
+
 .location-marker {
     display: flex;
     align-items: center;

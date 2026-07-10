@@ -108,7 +108,14 @@
             if (bv === '' && av !== '') {
                 return -1;
             }
-            var cmp = av.localeCompare(bv, undefined, { numeric: true });
+            var cmp;
+            var an = Number(a[sortKey]);
+            var bn = Number(b[sortKey]);
+            if (av !== '' && bv !== '' && isFinite(an) && isFinite(bn)) {
+                cmp = an - bn;
+            } else {
+                cmp = av.localeCompare(bv, undefined, { numeric: true });
+            }
             return sortAsc ? cmp : -cmp;
         });
         return sorted;
@@ -136,6 +143,49 @@
     function textCell(value) {
         var cell = document.createElement('td');
         cell.textContent = value || '—';
+        return cell;
+    }
+
+    function formatBps(bps) {
+        if (bps === null || bps === undefined || isNaN(bps)) {
+            return null;
+        }
+        var units = ['bps', 'Kbps', 'Mbps', 'Gbps', 'Tbps'];
+        var value = Number(bps);
+        var unit = 0;
+        while (value >= 1000 && unit < units.length - 1) {
+            value = value / 1000;
+            unit++;
+        }
+        return (value >= 100 || value === Math.round(value)
+            ? Math.round(value)
+            : value.toFixed(value >= 10 ? 1 : 2)) + ' ' + units[unit];
+    }
+
+    function utilizationCell(circuit) {
+        var pct = circuit.utilizationPct;
+        if (pct === null || pct === undefined || isNaN(pct)) {
+            return textCell(null);
+        }
+        pct = Number(pct);
+
+        var cell = document.createElement('td');
+        cell.className = 'util-cell';
+
+        var bar = document.createElement('div');
+        bar.className = 'util-bar';
+        var fill = document.createElement('div');
+        fill.className = 'util-bar-fill ' +
+            (pct >= 90 ? 'util-crit' : pct >= 70 ? 'util-warn' : 'util-ok');
+        fill.style.width = Math.min(pct, 100) + '%';
+        bar.appendChild(fill);
+        cell.appendChild(bar);
+
+        var label = document.createElement('span');
+        label.className = 'util-label';
+        label.textContent = pct + '%';
+        cell.appendChild(label);
+
         return cell;
     }
 
@@ -167,6 +217,9 @@
             row.appendChild(textCell(circuit.z_location_name));
             row.appendChild(textCell(circuit.order_number));
             row.appendChild(textCell(Number(circuit.redundant) === 1 ? 'Yes' : 'No'));
+            row.appendChild(textCell(formatBps(circuit.usage_in_bps)));
+            row.appendChild(textCell(formatBps(circuit.usage_out_bps)));
+            row.appendChild(utilizationCell(circuit));
 
             tableBody.appendChild(row);
         });

@@ -128,10 +128,6 @@ final class EditController
             }
         }
 
-        [$cactiHostId, $cactiHostError] = $this->parsePositiveInt($body['cacti_host_id'] ?? null, 'Cacti device ID');
-        if ($cactiHostError !== null) {
-            return ResponseHelper::json(['error' => $cactiHostError], 422);
-        }
         [$cactiLocalDataId, $cactiDataError] = $this->parsePositiveInt(
             $body['cacti_local_data_id'] ?? null,
             'Cacti data source ID'
@@ -193,7 +189,7 @@ final class EditController
             $this->inTransaction(function () use (
                 $circuit, $oldVersionNumber, $uuid, $name, $description, $tags,
                 $newVersionNumber, $providerId, $providerCircuitId, $orderNumber,
-                $redundant, $aLocationId, $zLocationId, $cactiHostId, $cactiLocalDataId,
+                $redundant, $aLocationId, $zLocationId, $cactiLocalDataId,
                 $capacityBps, $normalizedXml, $currentUser
             ): void {
                 $this->versions->insert(
@@ -216,7 +212,6 @@ final class EditController
                     $redundant,
                     $aLocationId,
                     $zLocationId,
-                    $cactiHostId,
                     $cactiLocalDataId,
                     $capacityBps
                 );

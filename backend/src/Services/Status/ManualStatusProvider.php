@@ -7,11 +7,10 @@ namespace CircuitMap\Services\Status;
 use CircuitMap\Models\CircuitRepository;
 
 /**
- * Reads the status stored on the circuit row. Despite the name this now
- * serves two write paths: users setting status via the UI (source
- * "manual") and the supervisord-run Cacti poller (bin/poll_cacti.php,
- * source "cacti"), which overwrites status on every poll for circuits
- * that have a cacti_host_id mapping.
+ * Reads the status stored on the circuit row, written by users via the UI
+ * (source "manual"). The Cacti poller (bin/poll_cacti.php) polls device
+ * status onto locations, not circuits, so this is the only circuit status
+ * path.
  */
 final class ManualStatusProvider implements StatusProviderInterface
 {

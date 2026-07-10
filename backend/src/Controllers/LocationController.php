@@ -12,6 +12,7 @@ use CircuitMap\Support\BasePath;
 use CircuitMap\Support\ClientIp;
 use CircuitMap\Support\LocationIcon;
 use CircuitMap\Support\Response as ResponseHelper;
+use CircuitMap\Support\StatusColor;
 use CircuitMap\Support\View;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -55,6 +56,7 @@ final class LocationController
                 $location['latitude'] = (float) $location['latitude'];
                 $location['longitude'] = (float) $location['longitude'];
                 $location['iconSymbol'] = LocationIcon::symbolFor($location['icon'] ?? null);
+                $location['statusColor'] = StatusColor::forStatus($location['status'] ?? null);
                 return $location;
             },
             $this->locations->listMappable()
@@ -94,6 +96,7 @@ final class LocationController
         $address = $this->nullableTrim($body['address'] ?? null);
         $notes = $this->nullableTrim($body['notes'] ?? null);
         [$latitude, $longitude, $icon, $coordError] = $this->parseMapFields($body);
+        [$cactiHostId, $cactiError] = $this->parsePositiveInt($body['cacti_host_id'] ?? null, 'Cacti device ID');
 
         if ($name === '') {
             return $this->renderLocationsPage($response, $currentUser, 'A location name is required.', 422);
@@ -104,8 +107,11 @@ final class LocationController
         if ($coordError !== null) {
             return $this->renderLocationsPage($response, $currentUser, $coordError, 422);
         }
+        if ($cactiError !== null) {
+            return $this->renderLocationsPage($response, $currentUser, $cactiError, 422);
+        }
 
-        $newLocationId = $this->locations->insert($name, $address, $notes, $latitude, $longitude, $icon);
+        $newLocationId = $this->locations->insert($name, $address, $notes, $latitude, $longitude, $icon, $cactiHostId);
         $this->auditLog->log(
             (int) $currentUser['id'],
             'location_create',
@@ -129,6 +135,7 @@ final class LocationController
         $address = $this->nullableTrim($body['address'] ?? null);
         $notes = $this->nullableTrim($body['notes'] ?? null);
         [$latitude, $longitude, $icon, $coordError] = $this->parseMapFields($body);
+        [$cactiHostId, $cactiError] = $this->parsePositiveInt($body['cacti_host_id'] ?? null, 'Cacti device ID');
 
         if ($this->locations->findById($targetId) === null) {
             return $this->renderLocationsPage($response, $currentUser, 'Location not found.', 404);
@@ -143,8 +150,11 @@ final class LocationController
         if ($coordError !== null) {
             return $this->renderLocationsPage($response, $currentUser, $coordError, 422);
         }
+        if ($cactiError !== null) {
+            return $this->renderLocationsPage($response, $currentUser, $cactiError, 422);
+        }
 
-        $this->locations->update($targetId, $name, $address, $notes, $latitude, $longitude, $icon);
+        $this->locations->update($targetId, $name, $address, $notes, $latitude, $longitude, $icon, $cactiHostId);
         $this->auditLog->log(
             (int) $currentUser['id'],
             'location_update',
@@ -180,6 +190,24 @@ final class LocationController
         );
 
         return (new \Slim\Psr7\Response())->withHeader('Location', BasePath::url('/admin/locations'))->withStatus(302);
+    }
+
+    /**
+     * Optional positive-integer form field: null/'' clears the value,
+     * anything else must be a whole number greater than zero.
+     *
+     * @param mixed $raw
+     * @return array{0: ?int, 1: ?string} [value, errorMessage]
+     */
+    private function parsePositiveInt($raw, string $label): array
+    {
+        if ($raw === null || $raw === '') {
+            return [null, null];
+        }
+        if ((is_int($raw) || (is_string($raw) && ctype_digit($raw))) && (int) $raw > 0) {
+            return [(int) $raw, null];
+        }
+        return [null, "{$label} must be a positive whole number."];
     }
 
     /**

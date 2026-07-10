@@ -237,7 +237,6 @@ final class EditFlowTest extends DatabaseTestCase
     {
         $payload = [
             'name' => 'Updated Name',
-            'cacti_host_id' => '42',
             'cacti_local_data_id' => 7,
             'capacity_bps' => 100000000,
             'geojson' => [
@@ -259,12 +258,10 @@ final class EditFlowTest extends DatabaseTestCase
         $this->assertSame(200, $response->getStatusCode());
 
         $circuit = $this->circuits->findByUuid($this->uuid);
-        $this->assertSame(42, (int) $circuit['cacti_host_id']);
         $this->assertSame(7, (int) $circuit['cacti_local_data_id']);
         $this->assertSame(100000000, (int) $circuit['capacity_bps']);
 
         // Saving again with the fields blank clears the mapping.
-        $payload['cacti_host_id'] = '';
         $payload['cacti_local_data_id'] = null;
         $payload['capacity_bps'] = null;
         $response = $this->controller->update(
@@ -275,7 +272,6 @@ final class EditFlowTest extends DatabaseTestCase
 
         $this->assertSame(200, $response->getStatusCode());
         $circuit = $this->circuits->findByUuid($this->uuid);
-        $this->assertNull($circuit['cacti_host_id']);
         $this->assertNull($circuit['cacti_local_data_id']);
         $this->assertNull($circuit['capacity_bps']);
     }
@@ -285,7 +281,7 @@ final class EditFlowTest extends DatabaseTestCase
         foreach (['-5', 'abc', '0', 3.7] as $bad) {
             $payload = [
                 'name' => 'Updated Name',
-                'cacti_host_id' => $bad,
+                'cacti_local_data_id' => $bad,
                 'geojson' => [
                     'type' => 'FeatureCollection',
                     'features' => [[
@@ -306,7 +302,7 @@ final class EditFlowTest extends DatabaseTestCase
         }
 
         $circuit = $this->circuits->findByUuid($this->uuid);
-        $this->assertNull($circuit['cacti_host_id']);
+        $this->assertNull($circuit['cacti_local_data_id']);
         $this->assertSame('Original Name', $circuit['name'], 'rejected edit must have no side effects');
     }
 

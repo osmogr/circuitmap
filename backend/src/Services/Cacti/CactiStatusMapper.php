@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace CircuitMap\Services\Cacti;
 
 /**
- * Translates Cacti's host.status codes into circuit status values
- * (the CHECK-constrained enum on the circuits table).
+ * Translates Cacti's host.status codes into site status values
+ * (the CHECK-constrained enum on the locations table).
  */
 final class CactiStatusMapper
 {
@@ -18,7 +18,7 @@ final class CactiStatusMapper
      * @param array{status: int, disabled: bool}|null $host null = host id
      *        not present in Cacti at all (typo'd mapping, deleted device).
      */
-    public static function toCircuitStatus(?array $host): string
+    public static function toStatus(?array $host): string
     {
         if ($host === null || $host['disabled']) {
             return 'unknown';

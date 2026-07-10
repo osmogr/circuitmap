@@ -85,17 +85,6 @@ use CircuitMap\Support\View;
                 <?php endforeach; ?>
             </select>
         </label>
-        <?php if (($circuit['cacti_host_id'] ?? null) !== null): ?>
-            <p class="hint">
-                Monitored by Cacti — manual status changes are overwritten on
-                the next poll.
-            </p>
-        <?php endif; ?>
-        <label>
-            Cacti Device ID
-            <input type="number" id="edit-cacti-host-id" min="1" step="1"
-                   value="<?= ($circuit['cacti_host_id'] ?? null) !== null ? (int) $circuit['cacti_host_id'] : '' ?>">
-        </label>
         <label>
             Cacti Data Source ID
             <input type="number" id="edit-cacti-data-id" min="1" step="1"
@@ -107,10 +96,10 @@ use CircuitMap\Support\View;
                    value="<?= ($circuit['capacity_bps'] ?? null) !== null ? rtrim(rtrim(number_format(((int) $circuit['capacity_bps']) / 1_000_000, 6, '.', ''), '0'), '.') : '' ?>">
         </label>
         <p class="hint">
-            Device ID links this circuit to a Cacti device for live up/down
-            status (it's the "id" in the device's edit-page URL in Cacti).
-            Data Source ID adds live traffic; with a capacity set, the map
-            also shows utilization. Leave blank to keep status manual.
+            Data Source ID links this circuit to a Cacti data source for
+            live traffic; with a capacity set, the map also shows
+            utilization. Site up/down status is configured per location on
+            the Locations admin page.
         </p>
         <p class="hint">
             Drag markers/vertices on the map to reposition. Click a placemark's

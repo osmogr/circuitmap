@@ -16,11 +16,10 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 /**
  * Manual status setting: a user picks a value from a dropdown and it is
  * stored on the circuit row via CircuitRepository::updateStatus with
- * status_source "manual". Circuits mapped to a Cacti device (cacti_host_id
- * set) also accept manual writes, but the Cacti poller
- * (bin/poll_cacti.php) overwrites them on its next pass — for mapped
- * circuits Cacti is authoritative. getStatus() reads whichever source
- * wrote last, via the StatusProviderInterface binding in App.php.
+ * status_source "manual". Circuit status is manual-only — the Cacti poller
+ * (bin/poll_cacti.php) writes device status onto locations, never onto
+ * circuits. getStatus() reads the stored value via the
+ * StatusProviderInterface binding in App.php.
  */
 final class StatusController
 {

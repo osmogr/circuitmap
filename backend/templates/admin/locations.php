@@ -6,6 +6,7 @@
 
 use CircuitMap\Support\Asset;
 use CircuitMap\Support\BasePath;
+use CircuitMap\Support\StatusColor;
 use CircuitMap\Support\View;
 ?>
 <link rel="stylesheet" href="<?= Asset::url('/assets/vendor/leaflet/leaflet.css') ?>">
@@ -16,6 +17,10 @@ use CircuitMap\Support\View;
         <p class="error"><?= View::escape($error) ?></p>
     <?php endif; ?>
     <p class="hint">Set latitude and longitude (together) to show a location on the map, with the icon below.</p>
+    <p class="hint">
+        Cacti Device ID links this site to a Cacti device for live up/down
+        status (it's the "id" in the device's edit-page URL in Cacti).
+    </p>
 
     <?php foreach ($locations as $location): ?>
         <form id="location-form-<?= (int) $location['id'] ?>" method="post"
@@ -33,6 +38,8 @@ use CircuitMap\Support\View;
                 <th>Latitude</th>
                 <th>Longitude</th>
                 <th>Icon</th>
+                <th>Cacti Device ID</th>
+                <th>Status</th>
                 <th>Active</th>
                 <th>Actions</th>
             </tr>
@@ -75,6 +82,15 @@ use CircuitMap\Support\View;
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                    </td>
+                    <td>
+                        <input type="number" form="<?= $formId ?>" name="cacti_host_id" min="1" step="1"
+                               value="<?= ($location['cacti_host_id'] ?? null) !== null ? (int) $location['cacti_host_id'] : '' ?>">
+                    </td>
+                    <td>
+                        <span class="status-dot"
+                              style="background-color: <?= View::escape(StatusColor::forStatus($location['status'] ?? null)) ?>"></span>
+                        <?= View::escape($location['status'] ?? 'unknown') ?>
                     </td>
                     <td><?= $location['is_active'] ? 'Yes' : 'No' ?></td>
                     <td>
@@ -126,6 +142,10 @@ use CircuitMap\Support\View;
                     </option>
                 <?php endforeach; ?>
             </select>
+        </label>
+        <label>
+            Cacti Device ID
+            <input type="number" name="cacti_host_id" min="1" step="1">
         </label>
         <button type="submit">Create location</button>
     </form>

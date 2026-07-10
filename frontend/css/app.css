@@ -373,6 +373,17 @@ main:has(.edit-page) {
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+}
+
+.location-status-dot {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid #fff;
 }
 
 .location-marker-symbol {

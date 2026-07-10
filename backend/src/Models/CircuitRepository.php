@@ -65,7 +65,7 @@ final class CircuitRepository
             'SELECT c.id, c.uuid, c.name, c.description, c.tags, c.owner_id, c.status, c.status_source,
                     c.status_updated_at, c.color, c.provider_id, c.provider_circuit_id, c.order_number,
                     c.redundant, c.a_location_id, c.z_location_id, c.uploaded_at, c.updated_at,
-                    c.cacti_host_id, c.cacti_local_data_id, c.capacity_bps,
+                    c.cacti_local_data_id, c.capacity_bps,
                     c.usage_in_bps, c.usage_out_bps, c.usage_updated_at,
                     p.name AS provider_name, p.tech_support_number AS provider_tech_support_number,
                     p.account_id AS provider_account_id, p.local_rep_contact AS provider_local_rep_contact,
@@ -103,7 +103,6 @@ final class CircuitRepository
         bool $redundant = false,
         ?int $aLocationId = null,
         ?int $zLocationId = null,
-        ?int $cactiHostId = null,
         ?int $cactiLocalDataId = null,
         ?int $capacityBps = null
     ): void {
@@ -113,7 +112,7 @@ final class CircuitRepository
                  provider_id = :provider_id, provider_circuit_id = :provider_circuit_id,
                  order_number = :order_number, redundant = :redundant,
                  a_location_id = :a_location_id, z_location_id = :z_location_id,
-                 cacti_host_id = :cacti_host_id, cacti_local_data_id = :cacti_local_data_id,
+                 cacti_local_data_id = :cacti_local_data_id,
                  capacity_bps = :capacity_bps,
                  current_version = :version, updated_at = :now
              WHERE id = :id'
@@ -128,7 +127,6 @@ final class CircuitRepository
             'redundant' => $redundant ? 1 : 0,
             'a_location_id' => $aLocationId,
             'z_location_id' => $zLocationId,
-            'cacti_host_id' => $cactiHostId,
             'cacti_local_data_id' => $cactiLocalDataId,
             'capacity_bps' => $capacityBps,
             'version' => $newVersionNumber,
@@ -166,39 +164,18 @@ final class CircuitRepository
     }
 
     /**
-     * Circuits mapped to a Cacti device, for the poller.
+     * Circuits mapped to a Cacti traffic data source, for the poller.
      *
      * @return array<int, array<string, mixed>>
      */
-    public function listCactiMapped(): array
+    public function listTrafficMapped(): array
     {
         $stmt = $this->pdo->query(
-            'SELECT id, uuid, cacti_host_id, cacti_local_data_id, capacity_bps,
-                    status, status_source, status_updated_at
+            'SELECT id, uuid, cacti_local_data_id
              FROM circuits
-             WHERE deleted_at IS NULL AND cacti_host_id IS NOT NULL'
+             WHERE deleted_at IS NULL AND cacti_local_data_id IS NOT NULL'
         );
         return $stmt->fetchAll();
-    }
-
-    /**
-     * Poller variant of updateStatus: records the status with source
-     * "cacti" but deliberately does NOT bump updated_at, which means
-     * "content last edited" — a 5-minute poll must not make every mapped
-     * circuit look freshly edited.
-     */
-    public function updateStatusFromPoller(int $id, string $status): void
-    {
-        $stmt = $this->pdo->prepare(
-            'UPDATE circuits
-             SET status = :status, status_source = \'cacti\', status_updated_at = :now
-             WHERE id = :id'
-        );
-        $stmt->execute([
-            'status' => $status,
-            'now' => gmdate('Y-m-d\TH:i:s\Z'),
-            'id' => $id,
-        ]);
     }
 
     public function updateUsage(int $id, ?int $inBps, ?int $outBps): void
@@ -214,28 +191,6 @@ final class CircuitRepository
             'now' => gmdate('Y-m-d\TH:i:s\Z'),
             'id' => $id,
         ]);
-    }
-
-    /**
-     * Flips cacti-sourced statuses that haven't been refreshed since
-     * $cutoffIso to 'unknown', so a dead Cacti server cannot leave stale
-     * "up" circuits on the map indefinitely. Returns the number flipped.
-     */
-    public function markStaleCactiStatusesUnknown(string $cutoffIso): int
-    {
-        $stmt = $this->pdo->prepare(
-            'UPDATE circuits
-             SET status = \'unknown\', status_updated_at = :now
-             WHERE deleted_at IS NULL
-               AND status_source = \'cacti\'
-               AND status != \'unknown\'
-               AND status_updated_at < :cutoff'
-        );
-        $stmt->execute([
-            'now' => gmdate('Y-m-d\TH:i:s\Z'),
-            'cutoff' => $cutoffIso,
-        ]);
-        return $stmt->rowCount();
     }
 
     public function softDelete(int $id): void

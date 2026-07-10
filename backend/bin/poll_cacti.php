@@ -5,6 +5,7 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 use CircuitMap\Models\CircuitRepository;
+use CircuitMap\Models\LocationRepository;
 use CircuitMap\Services\Cacti\CactiClient;
 use CircuitMap\Services\Cacti\CactiPollService;
 use CircuitMap\Support\Database;
@@ -43,6 +44,7 @@ $client = new CactiClient(
     Env::get('CACTI_TRAFFIC_OUT_NAME', 'traffic_out')
 );
 $service = new CactiPollService(
+    new LocationRepository(Database::connection()),
     new CircuitRepository(Database::connection()),
     $client,
     Env::getInt('CACTI_STALE_AFTER', 900)
@@ -53,15 +55,16 @@ $runOnce = static function (CactiPollService $service): bool {
     $timestamp = gmdate('Y-m-d\TH:i:s\Z');
     if ($result['ok']) {
         fwrite(STDOUT, sprintf(
-            "[%s] cacti poll ok: %d mapped circuit(s), %d status(es), %d usage row(s)\n",
+            "[%s] cacti poll ok: %d site status(es) from %d mapped location(s), %d usage row(s) from %d mapped circuit(s)\n",
             $timestamp,
-            $result['circuits'],
             $result['statuses'],
-            $result['usages']
+            $result['locations'],
+            $result['usages'],
+            $result['circuits']
         ));
     } else {
         fwrite(STDERR, sprintf(
-            "[%s] cacti poll failed: %s (%d circuit(s) marked stale-unknown)\n",
+            "[%s] cacti poll failed: %s (%d location status(es) marked stale-unknown)\n",
             $timestamp,
             $result['error'],
             $result['stale']

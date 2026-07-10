@@ -211,6 +211,86 @@ final class LocationAdminFlowTest extends DatabaseTestCase
         $this->assertSame('New address', $location['notes']);
     }
 
+    public function testCreateLocationPersistsCactiHostIdWithUnknownStatus(): void
+    {
+        $request = $this->requestWithBody('POST', '/admin/locations', [
+            'name' => 'Main Street DC',
+            'cacti_host_id' => '42',
+        ]);
+
+        $response = $this->controller->createLocation($request, (new ResponseFactory())->createResponse());
+
+        $this->assertSame(302, $response->getStatusCode());
+        $location = $this->locations->listAll()[0];
+        $this->assertSame(42, (int) $location['cacti_host_id']);
+        $this->assertSame('unknown', $location['status']);
+        $this->assertNull($location['status_updated_at']);
+    }
+
+    public function testCreateLocationRejectsInvalidCactiHostId(): void
+    {
+        foreach (['-5', 'abc', '0', 3.7] as $bad) {
+            $request = $this->requestWithBody('POST', '/admin/locations', [
+                'name' => 'Main Street DC',
+                'cacti_host_id' => $bad,
+            ]);
+
+            $response = $this->controller->createLocation($request, (new ResponseFactory())->createResponse());
+
+            $this->assertSame(422, $response->getStatusCode(), 'value should be rejected: ' . var_export($bad, true));
+        }
+        $this->assertCount(0, $this->locations->listAll());
+    }
+
+    public function testUpdateChangingOrClearingCactiHostIdResetsStatus(): void
+    {
+        $locationId = $this->locations->insert('Main Street DC', null, null, null, null, null, 42);
+        $this->locations->updateStatusFromPoller($locationId, 'up');
+
+        // Saving with the same device id keeps the polled status.
+        $this->updateLocationRequest($locationId, ['name' => 'Main Street DC', 'cacti_host_id' => '42']);
+        $location = $this->locations->findById($locationId);
+        $this->assertSame('up', $location['status'], 'unchanged mapping keeps polled status');
+
+        // Pointing at a different device invalidates the old status.
+        $this->updateLocationRequest($locationId, ['name' => 'Main Street DC', 'cacti_host_id' => '43']);
+        $location = $this->locations->findById($locationId);
+        $this->assertSame('unknown', $location['status'], 'changed mapping resets status');
+        $this->assertNull($location['status_updated_at']);
+
+        // Clearing the mapping also clears the status.
+        $this->locations->updateStatusFromPoller($locationId, 'up');
+        $this->updateLocationRequest($locationId, ['name' => 'Main Street DC', 'cacti_host_id' => '']);
+        $location = $this->locations->findById($locationId);
+        $this->assertNull($location['cacti_host_id']);
+        $this->assertSame('unknown', $location['status'], 'cleared mapping resets status');
+    }
+
+    public function testListJsonIncludesStatusAndStatusColor(): void
+    {
+        $locationId = $this->locations->insert('Geolocated', '123 Main St', null, 39.78, -89.65, 'office', 42);
+        $this->locations->updateStatusFromPoller($locationId, 'up');
+
+        $response = $this->controller->listJson(
+            (new ServerRequestFactory())->createServerRequest('GET', '/api/locations'),
+            (new ResponseFactory())->createResponse()
+        );
+
+        $body = json_decode((string) $response->getBody(), true);
+        $this->assertSame('up', $body['locations'][0]['status']);
+        $this->assertSame('#16a34a', $body['locations'][0]['statusColor']);
+    }
+
+    private function updateLocationRequest(int $locationId, array $body): void
+    {
+        $response = $this->controller->updateLocation(
+            $this->requestWithBody('POST', "/admin/locations/{$locationId}", $body),
+            (new ResponseFactory())->createResponse(),
+            ['id' => (string) $locationId]
+        );
+        $this->assertSame(302, $response->getStatusCode());
+    }
+
     public function testDeactivateRemovesLocationFromActiveListButKeepsExistingReference(): void
     {
         $locationId = $this->locations->insert('Main Street DC', null, null);

@@ -35,6 +35,8 @@
     var circuitsByUuid = {};
     var statusDotsByUuid = {};
     var checkboxesByUuid = {};
+    var locationsById = {};
+    var locationMarkersById = {};
 
     function formatBps(bps) {
         if (bps === null || bps === undefined || isNaN(bps)) {
@@ -274,6 +276,7 @@
         var meta = document.createElement('div');
         meta.className = 'circuit-popup-meta';
         [
+            metaRow('Status', location.status || 'unknown'),
             metaRow('Address', location.address),
             metaRow('Notes', location.notes)
         ].forEach(function (row) {
@@ -331,15 +334,21 @@
             }
             var icon = L.divIcon({
                 className: 'location-marker',
-                html: '<span class="location-marker-symbol">' + (location.iconSymbol || '📍') + '</span>',
+                // statusColor is a server-generated hex value (StatusColor),
+                // same trust level as iconSymbol.
+                html: '<span class="location-marker-symbol">' + (location.iconSymbol || '📍') + '</span>'
+                    + '<span class="location-status-dot" style="background-color: '
+                    + (location.statusColor || '#6b7280') + '"></span>',
                 iconSize: [28, 28],
                 iconAnchor: [14, 14]
             });
-            L.marker([location.latitude, location.longitude], { icon: icon })
+            var marker = L.marker([location.latitude, location.longitude], { icon: icon })
                 .bindPopup(function () {
                     return locationPopupHtml(location);
                 })
                 .addTo(map);
+            locationsById[location.id] = location;
+            locationMarkersById[location.id] = marker;
         });
     }
 
@@ -379,10 +388,45 @@
             });
     }
 
+    // Same in-place-mutation approach as refreshCircuitStatuses: popups are
+    // built lazily from the location objects, so only the marker status dot
+    // needs an explicit repaint (updated in the existing DOM node — setIcon
+    // would replace it and close any open popup).
+    function refreshLocationStatuses() {
+        fetch(window.CircuitMapBasePath + '/api/locations')
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                (data.locations || []).forEach(function (fresh) {
+                    var location = locationsById[fresh.id];
+                    if (!location) {
+                        return;
+                    }
+                    Object.keys(fresh).forEach(function (key) {
+                        location[key] = fresh[key];
+                    });
+
+                    var marker = locationMarkersById[location.id];
+                    var element = marker && marker.getElement();
+                    var dot = element && element.querySelector('.location-status-dot');
+                    if (dot) {
+                        dot.style.backgroundColor = location.statusColor || '#6b7280';
+                    }
+                });
+            })
+            .catch(function () {
+                // Transient fetch failure; the next tick retries.
+            });
+    }
+
     fetch(window.CircuitMapBasePath + '/api/circuits')
         .then(function (res) { return res.json(); })
         .then(function (data) { renderCircuitList(data.circuits || []); })
-        .then(function () { setInterval(refreshCircuitStatuses, 60000); });
+        .then(function () {
+            setInterval(function () {
+                refreshCircuitStatuses();
+                refreshLocationStatuses();
+            }, 60000);
+        });
 
     fetch(window.CircuitMapBasePath + '/api/locations')
         .then(function (res) { return res.json(); })

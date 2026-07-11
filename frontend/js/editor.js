@@ -65,7 +65,7 @@
     }
 
     function loadExisting() {
-        fetch(window.CircuitMapBasePath + '/api/circuits/' + encodeURIComponent(uuid) + '/geojson')
+        return fetch(window.CircuitMapBasePath + '/api/circuits/' + encodeURIComponent(uuid) + '/geojson')
             .then(function (res) { return res.json(); })
             .then(function (geojson) {
                 var layer = L.geoJSON(geojson, {
@@ -85,8 +85,67 @@
                 });
                 if (layer.getBounds().isValid()) {
                     map.fitBounds(layer.getBounds(), { maxZoom: 16 });
+                    return true;
                 }
-            });
+                return false;
+            })
+            .catch(function () { return false; });
+    }
+
+    function sitePopupHtml(location) {
+        var box = document.createElement('div');
+        var title = document.createElement('strong');
+        title.textContent = location.name;
+        box.appendChild(title);
+        [
+            ['Status', location.status || 'unknown'],
+            ['Address', location.address]
+        ].forEach(function (pair) {
+            if (!pair[1]) {
+                return;
+            }
+            var row = document.createElement('div');
+            row.textContent = pair[0] + ': ' + pair[1];
+            box.appendChild(row);
+        });
+        return box;
+    }
+
+    function loadSites() {
+        return fetch(window.CircuitMapBasePath + '/api/locations')
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                var bounds = L.latLngBounds([]);
+                (data.locations || []).forEach(function (location) {
+                    if (typeof location.latitude !== 'number' || typeof location.longitude !== 'number') {
+                        return;
+                    }
+                    var icon = L.divIcon({
+                        className: 'location-marker',
+                        // statusColor is a server-generated hex value (StatusColor),
+                        // same trust level as iconSymbol.
+                        html: '<span class="location-marker-symbol">' + (location.iconSymbol || '📍') + '</span>'
+                            + '<span class="location-status-dot" style="background-color: '
+                            + (location.statusColor || '#6b7280') + '"></span>',
+                        iconSize: [28, 28],
+                        iconAnchor: [14, 14]
+                    });
+                    // pmIgnore keeps Geoman's edit/drag/removal modes off site
+                    // markers (they are reference points, not circuit geometry);
+                    // snapIgnore: false still lets drawn vertices snap to them.
+                    L.marker([location.latitude, location.longitude], {
+                        icon: icon,
+                        pmIgnore: true,
+                        snapIgnore: false
+                    })
+                        .bindTooltip(location.name)
+                        .bindPopup(function () { return sitePopupHtml(location); })
+                        .addTo(map);
+                    bounds.extend([location.latitude, location.longitude]);
+                });
+                return bounds;
+            })
+            .catch(function () { return L.latLngBounds([]); });
     }
 
     map.on('pm:create', function (e) {
@@ -245,6 +304,12 @@
     document.getElementById('edit-status-select').addEventListener('change', saveStatus);
     document.getElementById('edit-delete').addEventListener('click', deleteCircuit);
 
-    loadExisting();
+    // Frame the map on the circuit geometry when it exists; otherwise on
+    // the site markers, so a new empty circuit doesn't open at world zoom.
+    Promise.all([loadExisting(), loadSites()]).then(function (results) {
+        if (!results[0] && results[1].isValid()) {
+            map.fitBounds(results[1], { maxZoom: 12, padding: [30, 30] });
+        }
+    });
     loadVersions();
 })();

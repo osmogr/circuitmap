@@ -284,6 +284,53 @@ final class CircuitController
         return $response->withHeader('Content-Type', 'text/html; charset=utf-8');
     }
 
+    public function exportCsv(Request $request, Response $response): Response
+    {
+        $rows = $this->circuits->listVisibleAllColumns();
+
+        // With zero circuits the header still has to exist, so derive it
+        // from the live schema the same way the query builds its columns.
+        if ($rows !== []) {
+            $header = array_keys($rows[0]);
+        } else {
+            $header = [];
+            foreach ($this->pdo->query('PRAGMA table_info(circuits)')->fetchAll() as $column) {
+                $header[] = (string) $column['name'];
+            }
+            $header = array_merge($header, ['provider_name', 'a_location_name', 'z_location_name']);
+        }
+
+        $buffer = fopen('php://temp', 'r+');
+        if ($buffer === false) {
+            throw new \RuntimeException('Could not allocate a buffer for the CSV export.');
+        }
+        fputcsv($buffer, $header);
+        foreach ($rows as $row) {
+            fputcsv($buffer, $row);
+        }
+        rewind($buffer);
+        $csv = (string) stream_get_contents($buffer);
+        fclose($buffer);
+
+        // The report is public unless REQUIRE_AUTH_FOR_VIEW, so the export
+        // may be anonymous; audit_log.user_id is nullable for that case.
+        $currentUser = $this->auth->currentUser();
+        $this->auditLog->log(
+            $currentUser !== null ? (int) $currentUser['id'] : null,
+            'export',
+            null,
+            sprintf('format=csv circuits=%d', count($rows)),
+            ClientIp::from($request)
+        );
+
+        $filename = 'circuitmap-circuits-' . gmdate('Ymd') . '.csv';
+        $response->getBody()->write($csv);
+        return $response
+            ->withHeader('Content-Type', 'text/csv; charset=utf-8')
+            ->withHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+            ->withHeader('Content-Length', (string) strlen($csv));
+    }
+
     public function listJson(Request $request, Response $response): Response
     {
         $circuits = array_map(

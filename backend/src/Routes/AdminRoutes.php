@@ -7,6 +7,7 @@ namespace CircuitMap\Routes;
 use CircuitMap\Controllers\AdminController;
 use CircuitMap\Controllers\CircuitProviderController;
 use CircuitMap\Controllers\ExportController;
+use CircuitMap\Controllers\InstanceTransferController;
 use CircuitMap\Controllers\LocationController;
 use CircuitMap\Middleware\AuthGateMiddleware;
 use CircuitMap\Middleware\CsrfMiddleware;
@@ -30,6 +31,8 @@ final class AdminRoutes
         $locationController = $services['locationController'];
         /** @var ExportController $exportController */
         $exportController = $services['exportController'];
+        /** @var InstanceTransferController $instanceTransferController */
+        $instanceTransferController = $services['instanceTransferController'];
         /** @var AuthGateMiddleware $authGate */
         $authGate = $services['authGateMiddleware'];
         /** @var CsrfMiddleware $csrfMiddleware */
@@ -55,6 +58,18 @@ final class AdminRoutes
 
         $app->get('/admin/export/circuits.{format:kml|kmz}', [$exportController, 'exportCircuits'])
             ->add($adminOnly)->add($authGate);
+
+        $app->get('/admin/instance', [$instanceTransferController, 'showForm'])
+            ->add($adminOnly)->add($authGate);
+
+        $app->get('/admin/instance/export.zip', [$instanceTransferController, 'export'])
+            ->add($adminOnly)->add($authGate);
+
+        $app->post('/admin/instance/import', [$instanceTransferController, 'import'])
+            ->add($adminOnly)
+            ->add($authGate)
+            ->add($csrfMiddleware)
+            ->add(new RateLimitMiddleware($rateLimiter, 'instance_import', 3600, 5, 'user'));
 
         $app->get('/admin/providers', [$providerController, 'showProviders'])->add($editorOrAdmin)->add($authGate);
 

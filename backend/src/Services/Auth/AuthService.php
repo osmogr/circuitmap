@@ -84,7 +84,9 @@ final class AuthService
     public function logout(): void
     {
         $_SESSION = [];
-        session_regenerate_id(true);
+        if (session_status() === \PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
     }
 
     public function isAuthenticated(): bool

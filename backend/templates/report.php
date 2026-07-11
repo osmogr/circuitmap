@@ -24,6 +24,7 @@ use CircuitMap\Support\BasePath;
             <input type="search" id="report-filter-search" placeholder="Name, circuit ID, order #…">
         </label>
         <button type="button" id="report-filter-reset">Reset</button>
+        <a href="<?= BasePath::url('/circuits/report.csv') ?>" download>Export Circuits.csv</a>
         <span id="report-count" class="report-count"></span>
     </div>
     <div class="report-table-wrap">

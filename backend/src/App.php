@@ -10,6 +10,7 @@ use CircuitMap\Controllers\CircuitController;
 use CircuitMap\Controllers\CircuitProviderController;
 use CircuitMap\Controllers\EditController;
 use CircuitMap\Controllers\ExportController;
+use CircuitMap\Controllers\InstanceTransferController;
 use CircuitMap\Controllers\LocationController;
 use CircuitMap\Controllers\StatusController;
 use CircuitMap\Middleware\AuthGateMiddleware;
@@ -35,6 +36,8 @@ use CircuitMap\Services\Kml\KmlSanitizer;
 use CircuitMap\Services\Kml\KmlValidator;
 use CircuitMap\Services\Kml\KmzExtractor;
 use CircuitMap\Services\Geocoding\NominatimGeocodingService;
+use CircuitMap\Services\Instance\InstanceExportService;
+use CircuitMap\Services\Instance\InstanceImportService;
 use CircuitMap\Services\RateLimit\RateLimiterService;
 use CircuitMap\Services\Status\ManualStatusProvider;
 use CircuitMap\Services\Storage\FileStorageService;
@@ -129,6 +132,12 @@ final class App
         $folderSplitter = new KmlFolderSplitter();
         $pendingImports = new PendingImportStorage($storagePath);
         $kmlExportService = new KmlExportService($circuits, $storage, $parser);
+        $instanceExportService = new InstanceExportService($pdo, $storage);
+        $instanceImportService = new InstanceImportService(
+            $pdo,
+            $storage,
+            Env::getInt('INSTANCE_IMPORT_MAX_BYTES', 1_073_741_824)
+        );
         // StatusProviderInterface binding: swap this for a future polling
         // or webhook-based adapter without touching StatusController.
         $statusProvider = new ManualStatusProvider($circuits);
@@ -177,6 +186,13 @@ final class App
             'statusController' => new StatusController($circuits, $auditLog, $statusProvider),
             'adminController' => new AdminController($users, $auditLog, $csrf),
             'exportController' => new ExportController($kmlExportService, $auditLog),
+            'instanceTransferController' => new InstanceTransferController(
+                $instanceExportService,
+                $instanceImportService,
+                $auth,
+                $csrf,
+                $auditLog
+            ),
             'circuitProviderController' => new CircuitProviderController($circuitProviders, $auditLog, $csrf),
             'locationController' => new LocationController($locations, $auditLog, $csrf, $geocodingService),
             'editController' => new EditController(

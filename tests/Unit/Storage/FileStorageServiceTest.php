@@ -59,6 +59,20 @@ final class FileStorageServiceTest extends TestCase
         $this->storage->saveNew($identifier, '<kml/>');
     }
 
+    #[\PHPUnit\Framework\Attributes\DataProvider('maliciousIdentifiers')]
+    public function testWriteVersionRejectsMaliciousIdentifiers(string $identifier): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->storage->writeVersion($identifier, 1, '<kml/>');
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('maliciousIdentifiers')]
+    public function testDeleteCircuitDirRejectsMaliciousIdentifiers(string $identifier): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->storage->deleteCircuitDir($identifier);
+    }
+
     public function testMaliciousIdentifierCannotEscapeStorageRootEvenIfExceptionWereMissed(): void
     {
         // Even if the guard were somehow bypassed, confirm no file lands
@@ -94,5 +108,38 @@ final class FileStorageServiceTest extends TestCase
         $this->storage->saveNew($uuid, '<kml>hello</kml>');
 
         $this->assertSame('<kml>hello</kml>', $this->storage->read($uuid));
+    }
+
+    public function testWriteVersionStoresContentReadableByReadVersion(): void
+    {
+        $uuid = Uuid::v4();
+        $this->storage->saveNew($uuid, '<kml>current</kml>');
+        $relativePath = $this->storage->writeVersion($uuid, 3, '<kml>v3</kml>');
+
+        $this->assertSame("circuits/{$uuid}/versions/v3.kml", $relativePath);
+        $this->assertSame('<kml>v3</kml>', $this->storage->readVersion($uuid, 3));
+    }
+
+    public function testDeleteCircuitDirRemovesCurrentAndVersions(): void
+    {
+        $uuid = Uuid::v4();
+        $this->storage->saveNew($uuid, '<kml>current</kml>');
+        $this->storage->writeVersion($uuid, 1, '<kml>v1</kml>');
+
+        $this->storage->deleteCircuitDir($uuid);
+
+        $this->assertDirectoryDoesNotExist($this->root . '/circuits/' . $uuid);
+    }
+
+    public function testCircuitsRootIsEmptyReflectsStoredCircuits(): void
+    {
+        $this->assertTrue($this->storage->circuitsRootIsEmpty());
+
+        $uuid = Uuid::v4();
+        $this->storage->saveNew($uuid, '<kml/>');
+        $this->assertFalse($this->storage->circuitsRootIsEmpty());
+
+        $this->storage->deleteCircuitDir($uuid);
+        $this->assertTrue($this->storage->circuitsRootIsEmpty());
     }
 }

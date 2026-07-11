@@ -32,6 +32,7 @@ use CircuitMap\Support\View;
                     <a href="<?= BasePath::url('/admin/users') ?>">Admin</a>
                     <a href="<?= BasePath::url('/admin/export/circuits.kml') ?>" download>Export KML</a>
                     <a href="<?= BasePath::url('/admin/export/circuits.kmz') ?>" download>Export KMZ</a>
+                    <a href="<?= BasePath::url('/admin/instance') ?>">Instance Transfer</a>
                 <?php endif; ?>
                 <span class="nav-user"><?= View::escape($currentUser['username']) ?></span>
                 <form method="post" action="<?= BasePath::url('/logout') ?>" class="nav-logout-form">

@@ -77,6 +77,40 @@ final class FileStorageService
         }
     }
 
+    /**
+     * Writes supplied content directly to versions/vN.kml. Unlike
+     * archiveCurrent(), the content does not come from current.kml — this
+     * exists so an instance import can restore historical versions.
+     */
+    public function writeVersion(string $uuid, int $versionNumber, string $content): string
+    {
+        $versionsDir = $this->circuitDir($uuid) . '/versions';
+        if (!is_dir($versionsDir) && !mkdir($versionsDir, 0770, true) && !is_dir($versionsDir)) {
+            throw new \RuntimeException("Could not create versions directory for circuit {$uuid}.");
+        }
+
+        $path = $versionsDir . "/v{$versionNumber}.kml";
+        if (file_put_contents($path, $content, LOCK_EX) === false) {
+            throw new \RuntimeException("Could not write version {$versionNumber} for circuit {$uuid}.");
+        }
+
+        return "circuits/{$uuid}/versions/v{$versionNumber}.kml";
+    }
+
+    public function deleteCircuitDir(string $uuid): void
+    {
+        $this->removeDir($this->circuitDir($uuid));
+    }
+
+    public function circuitsRootIsEmpty(): bool
+    {
+        $entries = @scandir(rtrim($this->storageRoot, '/') . '/circuits');
+        if ($entries === false) {
+            return true;
+        }
+        return array_diff($entries, ['.', '..']) === [];
+    }
+
     public function readVersion(string $uuid, int $versionNumber): string
     {
         $path = $this->circuitDir($uuid) . "/versions/v{$versionNumber}.kml";
@@ -85,6 +119,21 @@ final class FileStorageService
             throw new \RuntimeException("Could not read version {$versionNumber} for circuit {$uuid}.");
         }
         return $content;
+    }
+
+    private function removeDir(string $dir): void
+    {
+        if (!is_dir($dir)) {
+            return;
+        }
+        foreach (scandir($dir) ?: [] as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+            $path = $dir . '/' . $entry;
+            is_dir($path) ? $this->removeDir($path) : @unlink($path);
+        }
+        @rmdir($dir);
     }
 
     private function circuitDir(string $uuid): string

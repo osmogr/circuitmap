@@ -58,6 +58,7 @@ container start (`docker/app/entrypoint.sh`), and are idempotent (a
 | `COOKIE_SECURE` | `true` | Marks the session cookie `Secure` (HTTPS only). Set `false` only for plain-HTTP local testing. |
 | `INITIAL_ADMIN_USERNAME` / `INITIAL_ADMIN_PASSWORD` | (required) | Bootstrap admin account, created once if `users` is empty. |
 | `MAX_UPLOAD_BYTES` | `10485760` (10 MB) | Application-level upload size cap, in addition to nginx/php.ini limits baked into the image. |
+| `INSTANCE_IMPORT_MAX_BYTES` | `1073741824` (1 GiB) | Maximum total uncompressed size of a full-instance import archive (Admin → Instance Transfer). |
 | `BASE_PATH` | (empty, serves from `/`) | Mount the app under a sub-path, e.g. `/circuitmap`, instead of the domain root. Must start with `/` and have no trailing slash. |
 
 The app is designed to sit behind an existing reverse proxy (nginx/Caddy)
@@ -255,6 +256,32 @@ docker compose up -d
 Schedule the backup commands (cron, systemd timer, or your existing backup
 tooling) on the Docker host; this project does not run its own backup
 scheduler.
+
+## Instance transfer (full export/import)
+
+Admins can move everything in one CircuitMap to a new deployment without
+touching Docker volumes, from **Admin → Instance Transfer**
+(`/admin/instance`):
+
+- **Export** downloads a single ZIP containing every persistent table
+  (users including password hashes, circuits, version history, providers,
+  locations, audit log) plus the complete per-circuit KML tree. Treat the
+  file like a database backup - it contains credentials.
+- **Import** uploads that ZIP into a **fresh, empty** instance (no
+  circuits/providers/locations and no users beyond the bootstrap admin)
+  and reproduces the source exactly, preserving row ids, circuit UUIDs and
+  timestamps. The restore is all-or-nothing: any validation or write
+  failure rolls everything back. Both instances must be on the same
+  CircuitMap version (the archive records the applied migrations and the
+  import refuses on a mismatch).
+- Imported accounts **replace** the bootstrap admin. If the archive has an
+  active admin with your username you stay logged in as that account;
+  otherwise you are logged out and must sign in with an admin account from
+  the imported data.
+
+The report page (`/circuits/report`) also has an **Export Circuits.csv**
+link that downloads all circuit fields (plus provider and A/Z location
+names) as CSV - that one is a data report, not a backup.
 
 ## Known assumptions and limitations
 

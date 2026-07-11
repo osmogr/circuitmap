@@ -81,6 +81,28 @@ final class CircuitRepository
     }
 
     /**
+     * Every circuits column (c.* keeps this in sync with schema changes)
+     * plus the joined provider and location names — the CSV export of the
+     * All Circuits report.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function listVisibleAllColumns(): array
+    {
+        $stmt = $this->pdo->query(
+            'SELECT c.*, p.name AS provider_name,
+                    la.name AS a_location_name, lz.name AS z_location_name
+             FROM circuits c
+             LEFT JOIN circuit_providers p ON p.id = c.provider_id
+             LEFT JOIN locations la ON la.id = c.a_location_id
+             LEFT JOIN locations lz ON lz.id = c.z_location_id
+             WHERE c.deleted_at IS NULL
+             ORDER BY c.name'
+        );
+        return $stmt->fetchAll();
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     public function findByUuid(string $uuid): ?array

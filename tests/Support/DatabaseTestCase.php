@@ -100,6 +100,26 @@ abstract class DatabaseTestCase extends TestCase
         );
     }
 
+    /**
+     * setUp() applies migrations by exec-ing the SQL files directly, so the
+     * schema_migrations bookkeeping table migrate.php maintains does not
+     * exist. Tests exercising code that reads it (instance export/import)
+     * call this to create and fill it the way migrate.php would.
+     */
+    protected function seedSchemaMigrations(PDO $pdo): void
+    {
+        $pdo->exec(
+            'CREATE TABLE IF NOT EXISTS schema_migrations (
+                filename TEXT PRIMARY KEY,
+                applied_at TEXT NOT NULL
+            )'
+        );
+        $insert = $pdo->prepare('INSERT INTO schema_migrations (filename, applied_at) VALUES (?, ?)');
+        foreach (glob(dirname(__DIR__, 2) . '/migrations/*.sql') ?: [] as $file) {
+            $insert->execute([basename($file), gmdate('Y-m-d\TH:i:s\Z')]);
+        }
+    }
+
     protected function createUser(string $username = 'testuser', string $role = 'editor'): int
     {
         $stmt = $this->pdo->prepare(

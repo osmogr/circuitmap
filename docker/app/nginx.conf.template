@@ -11,7 +11,9 @@ server {
     # trust boundary to work at all.
     underscores_in_headers on;
 
-    client_max_body_size 15m;
+    # Sized for full-instance import archives (see /admin/instance); KML
+    # uploads stay capped by MAX_UPLOAD_BYTES at the app level.
+    client_max_body_size 512m;
     client_body_timeout 60s;
 
     access_log /dev/stdout;
@@ -50,7 +52,9 @@ server {
         fastcgi_param SCRIPT_FILENAME $document_root/index.php;
         include fastcgi_params;
         fastcgi_param PATH_INFO $fastcgi_path_info;
-        fastcgi_read_timeout 60s;
+        # Long enough for a large instance export/import (they run under
+        # set_time_limit(300)).
+        fastcgi_read_timeout 300s;
     }
 
     location ~ /\. {
